@@ -1,0 +1,196 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Banners" activeNav="header-images">
+  <div class="space-y-5">
+
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <h2 class="text-xl font-bold text-white">Banners del Carrusel</h2>
+        <p class="text-sm text-slate-500 mt-0.5">Gestiona las imágenes publicitarias del header de la tienda</p>
+      </div>
+      <button id="btn-new-banner" class="btn-primary">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        Nuevo Banner
+      </button>
+    </div>
+
+    <!-- Gallery grid -->
+    <div id="banners-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div class="col-span-full text-center py-10 text-slate-500 text-sm">Cargando banners...</div>
+    </div>
+  </div>
+
+  <dialog id="banner-dialog">
+    <div class="modal-box max-w-md">
+      <div class="flex items-center justify-between mb-5">
+        <h3 id="banner-dialog-title" class="text-base font-semibold text-white">Nuevo Banner</h3>
+        <button id="close-banner-dialog" class="btn-icon btn-icon-red">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form id="banner-form" class="space-y-4" novalidate>
+        <input type="hidden" id="banner-id" />
+        <div>
+          <label class="form-label">Nombre del Banner <span class="text-red-400">*</span></label>
+          <input id="b-name" type="text" class="form-input" placeholder="Banner Verano 2025" required />
+        </div>
+        <div>
+          <label class="form-label">URL de la Imagen <span class="text-red-400">*</span></label>
+          <input id="b-image-url" type="url" class="form-input" placeholder="https://example.com/banner.jpg" required />
+        </div>
+        <div>
+          <label class="form-label">URL de Enlace (opcional)</label>
+          <input id="b-link-url" type="url" class="form-input" placeholder="https://ecommerce.mx/promo" />
+        </div>
+        <div>
+          <label class="form-label">Orden de Despliegue <span class="text-red-400">*</span></label>
+          <input id="b-order" type="number" min="0" class="form-input" placeholder="0" value="0" required />
+        </div>
+        <div id="banner-form-error" class="hidden rounded-lg px-4 py-3 text-sm text-red-400 bg-red-400/10 border border-red-400/25"></div>
+        <div class="flex gap-3 justify-end pt-1">
+          <button type="button" id="cancel-banner-dialog" class="btn-secondary">Cancelar</button>
+          <button type="submit" id="submit-banner" class="btn-primary"><span id="banner-submit-text">Crear Banner</span></button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog id="delete-banner-dialog">
+    <div class="modal-box max-w-sm text-center">
+      <div class="w-14 h-14 rounded-full bg-red-500/15 border border-red-500/25 flex items-center justify-center mx-auto mb-4">
+        <svg width="24" height="24" fill="none" stroke="#f87171" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+      </div>
+      <h3 class="text-base font-semibold text-white mb-2">Eliminar Banner</h3>
+      <p class="text-sm text-slate-400 mb-6">El banner será eliminado del carrusel.</p>
+      <input type="hidden" id="delete-banner-id" />
+      <div class="flex gap-3 justify-center">
+        <button id="cancel-delete-banner" class="btn-secondary">Cancelar</button>
+        <button id="confirm-delete-banner" class="btn-danger py-2.5 px-5">Eliminar</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script>
+    import { api, showToast } from '../utils/api.ts';
+
+    interface Banner {
+      id: string; name: string; image_url: string;
+      link_url?: string; display_order: number;
+    }
+
+    async function loadBanners() {
+      const grid = document.getElementById('banners-grid')!;
+      try {
+        const res = await api.get<Banner[]>('/header-images');
+        const banners = res.data as Banner[];
+        if (banners.length === 0) {
+          grid.innerHTML = '<div class="col-span-full text-center py-10 text-slate-500 text-sm">No hay banners registrados.</div>';
+          return;
+        }
+        grid.innerHTML = banners.map(b => `
+          <div class="glass-card-hover rounded-xl overflow-hidden group">
+            <div class="relative">
+              <img src="${b.image_url}" alt="${b.name}" class="w-full h-44 object-cover bg-slate-800"
+                onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
+              <div class="hidden w-full h-44 bg-slate-800 items-center justify-center text-slate-600 text-sm">Sin imagen</div>
+              <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <span class="absolute top-2 right-2 text-xs bg-black/60 text-slate-300 px-2 py-0.5 rounded-full">Orden: ${b.display_order}</span>
+            </div>
+            <div class="p-4">
+              <h4 class="font-semibold text-white text-sm mb-1">${b.name}</h4>
+              ${b.link_url ? `<p class="text-xs text-teal-400 truncate mb-3">${b.link_url}</p>` : `<p class="text-xs text-slate-600 mb-3">Sin enlace</p>`}
+              <div class="flex gap-2">
+                <button class="btn-icon btn-icon-teal flex-1 edit-banner-btn" data-id="${b.id}" data-name="${b.name}" data-image="${b.image_url}" data-link="${b.link_url ?? ''}" data-order="${b.display_order}">
+                  <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  <span class="text-xs">Editar</span>
+                </button>
+                <button class="btn-icon btn-icon-red delete-banner-btn" data-id="${b.id}">
+                  <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        `).join('');
+
+        document.querySelectorAll('.edit-banner-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const el = btn as HTMLElement;
+            (document.getElementById('banner-dialog-title')!).textContent = 'Editar Banner';
+            (document.getElementById('banner-submit-text')!).textContent = 'Guardar';
+            (document.getElementById('banner-id') as HTMLInputElement).value = el.dataset.id!;
+            (document.getElementById('b-name') as HTMLInputElement).value = el.dataset.name!;
+            (document.getElementById('b-image-url') as HTMLInputElement).value = el.dataset.image!;
+            (document.getElementById('b-link-url') as HTMLInputElement).value = el.dataset.link!;
+            (document.getElementById('b-order') as HTMLInputElement).value = el.dataset.order!;
+            (document.getElementById('banner-form-error')!).classList.add('hidden');
+            (document.getElementById('banner-dialog') as HTMLDialogElement).showModal();
+          });
+        });
+        document.querySelectorAll('.delete-banner-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            (document.getElementById('delete-banner-id') as HTMLInputElement).value = (btn as HTMLElement).dataset.id!;
+            (document.getElementById('delete-banner-dialog') as HTMLDialogElement).showModal();
+          });
+        });
+      } catch (err: unknown) {
+        grid.innerHTML = `<div class="col-span-full text-center py-10 text-red-400 text-sm">${err instanceof Error ? err.message : 'Error'}</div>`;
+      }
+    }
+
+    document.addEventListener('astro:page-load', () => {
+      if (window.location.pathname !== '/header-images') return;
+      loadBanners();
+
+      document.getElementById('btn-new-banner')?.addEventListener('click', () => {
+        (document.getElementById('banner-dialog-title')!).textContent = 'Nuevo Banner';
+        (document.getElementById('banner-submit-text')!).textContent = 'Crear Banner';
+        (document.getElementById('banner-id') as HTMLInputElement).value = '';
+        (document.getElementById('banner-form') as HTMLFormElement).reset();
+        (document.getElementById('banner-form-error')!).classList.add('hidden');
+        (document.getElementById('banner-dialog') as HTMLDialogElement).showModal();
+      });
+
+      const closeBannerDialog = () => (document.getElementById('banner-dialog') as HTMLDialogElement).close();
+      document.getElementById('close-banner-dialog')?.addEventListener('click', closeBannerDialog);
+      document.getElementById('cancel-banner-dialog')?.addEventListener('click', closeBannerDialog);
+      document.getElementById('banner-dialog')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeBannerDialog(); });
+
+      document.getElementById('banner-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errBox = document.getElementById('banner-form-error')!;
+        errBox.classList.add('hidden');
+        const id = (document.getElementById('banner-id') as HTMLInputElement).value;
+        const name = (document.getElementById('b-name') as HTMLInputElement).value.trim();
+        const image_url = (document.getElementById('b-image-url') as HTMLInputElement).value.trim();
+        const link_url = (document.getElementById('b-link-url') as HTMLInputElement).value.trim();
+        const display_order = parseInt((document.getElementById('b-order') as HTMLInputElement).value || '0');
+        const btn = document.getElementById('submit-banner') as HTMLButtonElement;
+        btn.disabled = true;
+        try {
+          const body: Record<string, unknown> = { name, image_url, display_order, ...(link_url && { link_url }) };
+          if (id) { await api.put(`/header-images/${id}`, body); showToast('Banner actualizado', 'success'); }
+          else { await api.post('/header-images', body); showToast('Banner creado', 'success'); }
+          closeBannerDialog();
+          loadBanners();
+        } catch (err: unknown) {
+          errBox.textContent = err instanceof Error ? err.message : 'Error';
+          errBox.classList.remove('hidden');
+        } finally { btn.disabled = false; }
+      });
+
+      document.getElementById('cancel-delete-banner')?.addEventListener('click', () => (document.getElementById('delete-banner-dialog') as HTMLDialogElement).close());
+      document.getElementById('delete-banner-dialog')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) (document.getElementById('delete-banner-dialog') as HTMLDialogElement).close(); });
+      document.getElementById('confirm-delete-banner')?.addEventListener('click', async () => {
+        const id = (document.getElementById('delete-banner-id') as HTMLInputElement).value;
+        try {
+          await api.delete(`/header-images/${id}`);
+          showToast('Banner eliminado', 'success');
+          (document.getElementById('delete-banner-dialog') as HTMLDialogElement).close();
+          loadBanners();
+        } catch (err: unknown) { showToast(err instanceof Error ? err.message : 'Error', 'error'); }
+      });
+    });
+  </script>
+</Layout>

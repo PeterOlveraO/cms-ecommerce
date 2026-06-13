@@ -1,0 +1,495 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Productos" activeNav="products">
+  <div class="space-y-5">
+
+    <!-- Header -->
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <h2 class="text-xl font-bold text-white">Inventario de Productos</h2>
+        <p class="text-sm text-slate-500 mt-0.5">Crea, edita y gestiona los productos del catálogo</p>
+      </div>
+      <button id="btn-new-product" class="btn-primary">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        Nuevo Producto
+      </button>
+    </div>
+
+    <!-- Filters -->
+    <div class="glass-card rounded-xl px-5 py-4 flex flex-wrap gap-3 items-center">
+      <div class="relative flex-1 min-w-48">
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        </span>
+        <input id="search-input" type="text" placeholder="Buscar por nombre o marca…" class="form-input pl-8 text-sm" />
+      </div>
+      <select id="category-filter" class="form-input text-sm w-auto min-w-40">
+        <option value="">Todas las categorías</option>
+      </select>
+      <select id="status-filter" class="form-input text-sm w-auto">
+        <option value="">Todos los estados</option>
+        <option value="active">Activos</option>
+        <option value="inactive">Inactivos</option>
+      </select>
+    </div>
+
+    <!-- Table -->
+    <div class="glass-card rounded-xl overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="cms-table" id="products-table">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Precio</th>
+              <th>Oferta</th>
+              <th>Stock</th>
+              <th>Estado</th>
+              <th class="text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="products-body">
+            <tr><td colspan="6" class="text-center py-10 text-slate-500">Cargando productos...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="flex items-center justify-between px-5 py-3 border-t border-teal-900/20">
+        <span id="pagination-info" class="text-xs text-slate-500"></span>
+        <div class="flex gap-2">
+          <button id="prev-page" class="btn-secondary text-xs py-1.5 px-3 disabled:opacity-40" disabled>← Anterior</button>
+          <button id="next-page" class="btn-secondary text-xs py-1.5 px-3 disabled:opacity-40" disabled>Siguiente →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Create / Edit Dialog ─────────────────────────────── -->
+  <dialog id="product-dialog">
+    <div class="modal-box max-w-xl">
+      <div class="flex items-center justify-between mb-5">
+        <h3 id="dialog-title" class="text-base font-semibold text-white">Nuevo Producto</h3>
+        <button id="close-dialog" class="btn-icon btn-icon-red">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <form id="product-form" class="space-y-4" novalidate>
+        <input type="hidden" id="product-id" />
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="form-label">Nombre <span class="text-red-400">*</span></label>
+            <input id="f-name" type="text" class="form-input" placeholder="SMOK Nord 5" required />
+          </div>
+          <div>
+            <label class="form-label">Marca <span class="text-red-400">*</span></label>
+            <input id="f-brand" type="text" class="form-input" placeholder="SMOK" required />
+          </div>
+        </div>
+
+        <div>
+          <label class="form-label">Descripción</label>
+          <textarea id="f-description" class="form-input resize-none" rows="2" placeholder="Descripción del producto…"></textarea>
+        </div>
+
+        <div class="grid grid-cols-3 gap-4">
+          <div>
+            <label class="form-label">Precio <span class="text-red-400">*</span></label>
+            <input id="f-price" type="number" min="0" step="0.01" class="form-input" placeholder="1299.00" required />
+          </div>
+          <div>
+            <label class="form-label">Precio Oferta</label>
+            <input id="f-sale-price" type="number" min="0" step="0.01" class="form-input" placeholder="999.00" />
+          </div>
+          <div>
+            <label class="form-label">Stock</label>
+            <input id="f-stock" type="number" min="0" class="form-input" placeholder="30" value="0" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="form-label">URL de Imagen <span class="text-red-400">*</span></label>
+            <input id="f-image-url" type="url" class="form-input" placeholder="https://example.com/producto.jpg" required />
+          </div>
+          <div>
+            <label class="form-label">Orden de Despliegue <span class="text-red-400">*</span></label>
+            <input id="f-display-order" type="number" min="0" class="form-input" placeholder="1" value="1" required />
+          </div>
+        </div>
+
+        <div>
+          <label class="form-label">Atributos del Producto</label>
+          <div id="attributes-checkboxes" class="space-y-2 mt-1">
+            <span class="text-xs text-slate-500">Cargando atributos…</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="form-label">Categorías</label>
+          <div id="categories-checkboxes" class="flex flex-wrap gap-2 mt-1">
+            <span class="text-xs text-slate-500">Cargando categorías…</span>
+          </div>
+        </div>
+
+        <div id="form-error" class="hidden rounded-lg px-4 py-3 text-sm text-red-400 bg-red-400/10 border border-red-400/25"></div>
+
+        <div class="flex gap-3 justify-end pt-2">
+          <button type="button" id="cancel-dialog" class="btn-secondary">Cancelar</button>
+          <button type="submit" id="submit-product" class="btn-primary">
+            <span id="submit-text">Crear Producto</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- ─── Delete confirmation dialog ────────────────────────── -->
+  <dialog id="delete-dialog">
+    <div class="modal-box max-w-sm text-center">
+      <div class="w-14 h-14 rounded-full bg-red-500/15 border border-red-500/25 flex items-center justify-center mx-auto mb-4">
+        <svg width="24" height="24" fill="none" stroke="#f87171" stroke-width="2" viewBox="0 0 24 24">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+        </svg>
+      </div>
+      <h3 class="text-base font-semibold text-white mb-2">Eliminar Producto</h3>
+      <p class="text-sm text-slate-400 mb-6">El producto será desactivado del catálogo. Esta acción puede revertirse desde la API.</p>
+      <input type="hidden" id="delete-product-id" />
+      <div class="flex gap-3 justify-center">
+        <button id="cancel-delete" class="btn-secondary">Cancelar</button>
+        <button id="confirm-delete" class="btn-danger py-2.5 px-5">Eliminar</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script>
+    import { api, showToast } from '../utils/api.ts';
+
+    interface Category { id: string; name: string; display_order: number; }
+    interface Product {
+      id: string; name: string; brand: string; description?: string;
+      price: number; sale_price?: number; stock: number;
+      image_url: string; display_order: number; is_active: boolean;
+      details?: Record<string, unknown>; category_ids?: string[];
+      categories?: Array<{id: string; name: string}> | string;
+    }
+    interface Pagination { total: number; page: number; limit: number; total_pages: number; }
+
+    let currentPage = 1;
+    let totalPages = 1;
+    let searchQuery = '';
+    let categoryFilter = '';
+    let allCategories: Category[] = [];
+
+    // ── Load categories for filter + checkboxes ────────────────
+    async function loadCategories() {
+      try {
+        const res = await api.get<Category[]>('/categories');
+        allCategories = res.data as Category[];
+        const sel = document.getElementById('category-filter') as HTMLSelectElement;
+        allCategories.forEach(cat => {
+          const opt = document.createElement('option');
+          opt.value = cat.id;
+          opt.textContent = cat.name;
+          sel.appendChild(opt);
+        });
+      } catch { /* non-critical */ }
+    }
+
+    // ── Render products ────────────────────────────────────────
+    async function loadProducts(page = 1) {
+      const tbody = document.getElementById('products-body')!;
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center py-10"><div class="inline-flex gap-2 text-slate-500"><span>Cargando</span><span class="animate-spin">⏳</span></div></td></tr>`;
+
+      const params = new URLSearchParams({ page: String(page), limit: '12' });
+      if (searchQuery) params.set('search', searchQuery);
+      if (categoryFilter) params.set('category_id', categoryFilter);
+
+      try {
+        const res = await api.get<Product[]>(`/products?${params}`);
+        const products = res.data as Product[];
+        const pagination = res.pagination as Pagination;
+        currentPage = pagination.page;
+        totalPages = pagination.total_pages;
+
+        const statusFilter = (document.getElementById('status-filter') as HTMLSelectElement).value;
+        const filtered = statusFilter === 'active' ? products.filter(p => p.is_active)
+                       : statusFilter === 'inactive' ? products.filter(p => !p.is_active)
+                       : products;
+
+        if (filtered.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" class="text-center py-10 text-slate-500">No se encontraron productos.</td></tr>`;
+        } else {
+          tbody.innerHTML = filtered.map(p => `
+            <tr>
+              <td>
+                <div class="flex items-center gap-3">
+                  <img src="${p.image_url}" alt="${p.name}" class="w-10 h-10 rounded-lg object-cover bg-slate-800" onerror="this.src='data:image/svg+xml,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;40&quot; height=&quot;40&quot; viewBox=&quot;0 0 24 24&quot; fill=&quot;%231e293b&quot;><rect width=&quot;24&quot; height=&quot;24&quot; rx=&quot;4&quot;/></svg>'" />
+                  <div>
+                    <p class="font-medium text-white text-sm">${p.name}</p>
+                    <p class="text-xs text-slate-500">${p.brand}</p>
+                  </div>
+                </div>
+              </td>
+              <td class="font-semibold text-white">$${Number(p.price).toLocaleString('es-MX',{minimumFractionDigits:2})}</td>
+              <td>${p.sale_price ? `<span class="text-teal-400 font-medium">$${Number(p.sale_price).toLocaleString('es-MX',{minimumFractionDigits:2})}</span>` : `<span class="text-slate-600">—</span>`}</td>
+              <td><span class="font-mono ${p.stock <= 5 ? 'text-red-400' : 'text-slate-300'}">${p.stock}</span></td>
+              <td>
+                <span class="text-xs px-2 py-0.5 rounded-full font-medium ${p.is_active ? 'badge-delivered' : 'badge-cancelled'}">
+                  ${p.is_active ? 'Activo' : 'Inactivo'}
+                </span>
+              </td>
+              <td>
+                <div class="flex gap-1.5 justify-end">
+                  <button class="btn-icon btn-icon-teal edit-btn" data-id="${p.id}" title="Editar">
+                    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
+                  <button class="btn-icon btn-icon-red delete-btn" data-id="${p.id}" title="Eliminar">
+                    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `).join('');
+          attachRowListeners();
+        }
+
+        // Pagination
+        document.getElementById('pagination-info')!.textContent =
+          `Página ${currentPage} de ${totalPages} — ${pagination.total} productos`;
+        (document.getElementById('prev-page') as HTMLButtonElement).disabled = currentPage <= 1;
+        (document.getElementById('next-page') as HTMLButtonElement).disabled = currentPage >= totalPages;
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Error al cargar productos';
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-10 text-red-400 text-sm">${msg}</td></tr>`;
+      }
+    }
+
+    // ── Open create dialog ─────────────────────────────────────
+    function openCreateDialog() {
+      (document.getElementById('dialog-title') as HTMLElement).textContent = 'Nuevo Producto';
+      (document.getElementById('submit-text') as HTMLElement).textContent = 'Crear Producto';
+      (document.getElementById('product-id') as HTMLInputElement).value = '';
+      (document.getElementById('product-form') as HTMLFormElement).reset();
+      renderCategoryCheckboxes([]);
+      renderAttributeCheckboxes({});
+      (document.getElementById('form-error') as HTMLElement).classList.add('hidden');
+      (document.getElementById('product-dialog') as HTMLDialogElement).showModal();
+    }
+
+    // ── Open edit dialog ───────────────────────────────────────
+    async function openEditDialog(id: string) {
+      (document.getElementById('dialog-title') as HTMLElement).textContent = 'Editar Producto';
+      (document.getElementById('submit-text') as HTMLElement).textContent = 'Guardar Cambios';
+      (document.getElementById('product-dialog') as HTMLDialogElement).showModal();
+
+      try {
+        const res = await api.get<Product>(`/products/${id}`);
+        const p = res.data as Product;
+
+        (document.getElementById('product-id') as HTMLInputElement).value = p.id;
+        (document.getElementById('f-name') as HTMLInputElement).value = p.name;
+        (document.getElementById('f-brand') as HTMLInputElement).value = p.brand;
+        (document.getElementById('f-description') as HTMLTextAreaElement).value = p.description ?? '';
+        (document.getElementById('f-price') as HTMLInputElement).value = String(p.price);
+        (document.getElementById('f-sale-price') as HTMLInputElement).value = p.sale_price ? String(p.sale_price) : '';
+        (document.getElementById('f-stock') as HTMLInputElement).value = String(p.stock);
+        (document.getElementById('f-image-url') as HTMLInputElement).value = p.image_url;
+        (document.getElementById('f-display-order') as HTMLInputElement).value = String(p.display_order);
+        
+        let categoryIds: string[] = [];
+        if (p.categories) {
+          try {
+            const cats = typeof p.categories === 'string' ? JSON.parse(p.categories) : p.categories;
+            categoryIds = (cats as Array<{id: string}>).filter(c => c !== null).map(c => c.id);
+          } catch { /* ignore */ }
+        }
+        renderCategoryCheckboxes(categoryIds);
+
+        const parsedDetails = p.details ? (typeof p.details === 'string' ? JSON.parse(p.details) : p.details) : {};
+        renderAttributeCheckboxes(parsedDetails as Record<string, string>);
+      } catch (err: unknown) {
+        showToast(err instanceof Error ? err.message : 'Error al cargar producto', 'error');
+        (document.getElementById('product-dialog') as HTMLDialogElement).close();
+      }
+    }
+
+    // ── Category checkboxes ────────────────────────────────────
+    function renderCategoryCheckboxes(selected: string[]) {
+      const container = document.getElementById('categories-checkboxes')!;
+      if (allCategories.length === 0) {
+        container.innerHTML = '<span class="text-xs text-slate-500">No hay categorías disponibles.</span>';
+        return;
+      }
+      container.innerHTML = allCategories.map(cat => `
+        <label class="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg cursor-pointer border transition-colors ${selected.includes(cat.id) ? 'bg-teal-500/15 border-teal-500/30 text-teal-300' : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:border-slate-600'}">
+          <input type="checkbox" name="cat-ids" value="${cat.id}" ${selected.includes(cat.id) ? 'checked' : ''} class="accent-teal-500" />
+          ${cat.name}
+        </label>
+      `).join('');
+    }
+
+    // ── Attribute checkboxes ───────────────────────────────────
+    function getAvailableAttributes(): string[] {
+      const raw = localStorage.getItem('vz_product_attributes');
+      if (raw) return JSON.parse(raw);
+      return ['Color', 'Material', 'Peso', 'Tamaño'];
+    }
+
+    function renderAttributeCheckboxes(currentDetails: Record<string, string>) {
+      const container = document.getElementById('attributes-checkboxes')!;
+      const attrs = getAvailableAttributes();
+      if (attrs.length === 0) {
+        container.innerHTML = '<span class="text-xs text-slate-500">No hay atributos definidos.</span>';
+        return;
+      }
+      container.innerHTML = attrs.map(attr => {
+        const hasVal = currentDetails[attr] !== undefined;
+        const val = currentDetails[attr] || '';
+        return `
+          <div class="flex items-center gap-2">
+            <input type="checkbox" name="attr-check" value="${attr}" class="accent-teal-500" ${hasVal ? 'checked' : ''} />
+            <span class="text-xs text-slate-400 w-20 shrink-0">${attr}</span>
+            <input type="text" name="attr-value" data-attr="${attr}" class="form-input text-xs flex-1" placeholder="Valor…" value="${val}" ${hasVal ? '' : 'disabled'} />
+          </div>
+        `;
+      }).join('');
+
+      // Add event listeners
+      container.querySelectorAll('input[name="attr-check"]').forEach(cb => {
+        cb.addEventListener('change', (e) => {
+          const target = e.target as HTMLInputElement;
+          const input = container.querySelector(`input[data-attr="${target.value}"]`) as HTMLInputElement;
+          if (input) {
+            input.disabled = !target.checked;
+            if (!target.checked) input.value = '';
+          }
+        });
+      });
+    }
+
+    // ── Attach table row listeners ─────────────────────────────
+    function attachRowListeners() {
+      document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', () => openEditDialog((btn as HTMLElement).dataset.id!));
+      });
+      document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          (document.getElementById('delete-product-id') as HTMLInputElement).value = (btn as HTMLElement).dataset.id!;
+          (document.getElementById('delete-dialog') as HTMLDialogElement).showModal();
+        });
+      });
+    }
+
+    // ── Form submit ────────────────────────────────────────────
+    document.getElementById('product-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errBox = document.getElementById('form-error')!;
+      errBox.classList.add('hidden');
+      const id = (document.getElementById('product-id') as HTMLInputElement).value;
+      const name = (document.getElementById('f-name') as HTMLInputElement).value.trim();
+      const brand = (document.getElementById('f-brand') as HTMLInputElement).value.trim();
+      const price = parseFloat((document.getElementById('f-price') as HTMLInputElement).value);
+      const salePrice = (document.getElementById('f-sale-price') as HTMLInputElement).value;
+      const stock = parseInt((document.getElementById('f-stock') as HTMLInputElement).value || '0');
+      const imageUrl = (document.getElementById('f-image-url') as HTMLInputElement).value.trim();
+      const displayOrder = parseInt((document.getElementById('f-display-order') as HTMLInputElement).value || '1');
+      const description = (document.getElementById('f-description') as HTMLTextAreaElement).value.trim();
+      
+      const details: Record<string, string> = {};
+      document.querySelectorAll<HTMLInputElement>('input[name="attr-check"]:checked').forEach(cb => {
+        const valueInput = document.querySelector<HTMLInputElement>(`input[data-attr="${cb.value}"]`);
+        if (valueInput && valueInput.value.trim()) {
+          details[cb.value] = valueInput.value.trim();
+        }
+      });
+      
+      const categoryIds = Array.from(document.querySelectorAll<HTMLInputElement>('input[name="cat-ids"]:checked')).map(cb => cb.value);
+
+      if (salePrice && parseFloat(salePrice) >= price) {
+        errBox.textContent = 'El precio de oferta debe ser menor al precio regular.';
+        errBox.classList.remove('hidden');
+        return;
+      }
+
+      const body: Record<string, unknown> = {
+        name, brand, price, stock, image_url: imageUrl, display_order: displayOrder,
+        ...(description && { description }),
+        ...(salePrice && { sale_price: parseFloat(salePrice) }),
+        ...(Object.keys(details).length > 0 && { details }),
+        ...(categoryIds.length && { category_ids: categoryIds }),
+      };
+
+      const submitBtn = document.getElementById('submit-product') as HTMLButtonElement;
+      submitBtn.disabled = true;
+      try {
+        if (id) {
+          await api.put(`/products/${id}`, body);
+          showToast('Producto actualizado correctamente', 'success');
+        } else {
+          await api.post('/products', body);
+          showToast('Producto creado correctamente', 'success');
+        }
+        (document.getElementById('product-dialog') as HTMLDialogElement).close();
+        loadProducts(currentPage);
+      } catch (err: unknown) {
+        errBox.textContent = err instanceof Error ? err.message : 'Error al guardar producto';
+        errBox.classList.remove('hidden');
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+
+    // ── Delete confirm ─────────────────────────────────────────
+    document.getElementById('confirm-delete')?.addEventListener('click', async () => {
+      const id = (document.getElementById('delete-product-id') as HTMLInputElement).value;
+      try {
+        await api.delete(`/products/${id}`);
+        showToast('Producto eliminado del catálogo', 'success');
+        (document.getElementById('delete-dialog') as HTMLDialogElement).close();
+        loadProducts(currentPage);
+      } catch (err: unknown) {
+        showToast(err instanceof Error ? err.message : 'Error al eliminar', 'error');
+      }
+    });
+
+    // ── Event wiring ───────────────────────────────────────────
+    document.addEventListener('astro:page-load', () => {
+      if (window.location.pathname !== '/products') return;
+
+      loadCategories().then(() => loadProducts());
+
+      document.getElementById('btn-new-product')?.addEventListener('click', openCreateDialog);
+
+      const closeDialog = () => (document.getElementById('product-dialog') as HTMLDialogElement).close();
+      document.getElementById('close-dialog')?.addEventListener('click', closeDialog);
+      document.getElementById('cancel-dialog')?.addEventListener('click', closeDialog);
+      document.getElementById('product-dialog')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeDialog(); });
+
+      document.getElementById('cancel-delete')?.addEventListener('click', () => (document.getElementById('delete-dialog') as HTMLDialogElement).close());
+      document.getElementById('delete-dialog')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) (document.getElementById('delete-dialog') as HTMLDialogElement).close(); });
+
+      let searchTimer: ReturnType<typeof setTimeout>;
+      document.getElementById('search-input')?.addEventListener('input', (e) => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+          searchQuery = (e.target as HTMLInputElement).value;
+          loadProducts(1);
+        }, 400);
+      });
+
+      document.getElementById('category-filter')?.addEventListener('change', (e) => {
+        categoryFilter = (e.target as HTMLSelectElement).value;
+        loadProducts(1);
+      });
+      document.getElementById('status-filter')?.addEventListener('change', () => loadProducts(currentPage));
+
+      document.getElementById('prev-page')?.addEventListener('click', () => { if (currentPage > 1) loadProducts(currentPage - 1); });
+      document.getElementById('next-page')?.addEventListener('click', () => { if (currentPage < totalPages) loadProducts(currentPage + 1); });
+    });
+  </script>
+</Layout>
