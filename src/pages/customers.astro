@@ -75,9 +75,9 @@ import Layout from '../layouts/Layout.astro';
 
     interface Customer {
       id: string; first_name: string; last_name: string;
-      phone_contact?: string; city?: string; state?: string; country?: string;
+      phone?: string; city?: string; state?: string; country?: string;
       street_address?: string; exterior_number?: string; interior_number?: string;
-      postal_code?: string; is_active?: boolean;
+      neighborhood?: string; postal_code?: string; is_active?: boolean;
     }
 
     let allCustomers: Customer[] = [];
@@ -104,7 +104,7 @@ import Layout from '../layouts/Layout.astro';
             <td class="text-slate-400 text-sm">${c.city ?? '—'}</td>
             <td class="text-slate-400 text-sm">${c.state ?? '—'}</td>
             <td class="text-slate-400 text-sm">${c.country ?? '—'}</td>
-            <td class="font-mono text-xs text-slate-400">${c.phone_contact ?? '—'}</td>
+            <td class="font-mono text-xs text-slate-400">${c.phone ?? '—'}</td>
             <td>
               <div class="flex gap-1.5 justify-end">
                 <button class="btn-icon btn-icon-teal view-customer-btn" data-id="${c.id}" title="Ver perfil">
@@ -152,7 +152,7 @@ import Layout from '../layouts/Layout.astro';
       try {
         const res = await api.get<Customer>(`/customers/${id}`);
         const c = res.data as Customer;
-        const address = [c.street_address, c.exterior_number, c.interior_number, c.postal_code, c.city, c.state, c.country]
+        const address = [c.street_address, c.exterior_number, c.interior_number, c.neighborhood, c.postal_code, c.city, c.state, c.country]
           .filter(Boolean).join(', ');
         content.innerHTML = `
           <div class="flex items-center gap-4 mb-5">
@@ -167,11 +167,19 @@ import Layout from '../layouts/Layout.astro';
           <div class="grid grid-cols-2 gap-3">
             <div class="glass-card rounded-lg p-3">
               <p class="text-xs text-slate-500 mb-1">Teléfono de Envío</p>
-              <p class="text-sm font-mono text-slate-200">${c.phone_contact ?? '—'}</p>
+              <p class="text-sm font-mono text-slate-200">${c.phone ?? '—'}</p>
             </div>
             <div class="glass-card rounded-lg p-3">
               <p class="text-xs text-slate-500 mb-1">Ciudad</p>
               <p class="text-sm text-slate-200">${c.city ?? '—'}</p>
+            </div>
+            <div class="glass-card rounded-lg p-3">
+              <p class="text-xs text-slate-500 mb-1">Colonia / Barrio</p>
+              <p class="text-sm text-slate-200">${c.neighborhood ?? '—'}</p>
+            </div>
+            <div class="glass-card rounded-lg p-3">
+              <p class="text-xs text-slate-500 mb-1">Código Postal</p>
+              <p class="text-sm font-mono text-slate-200">${c.postal_code ?? '—'}</p>
             </div>
             <div class="col-span-2 glass-card rounded-lg p-3">
               <p class="text-xs text-slate-500 mb-1">Dirección de Envío</p>
@@ -201,7 +209,7 @@ import Layout from '../layouts/Layout.astro';
           renderTable(allCustomers.filter(c =>
             `${c.first_name} ${c.last_name}`.toLowerCase().includes(q) ||
             (c.city ?? '').toLowerCase().includes(q) ||
-            (c.phone_contact ?? '').includes(q)
+            (c.phone ?? '').includes(q)
           ));
         }, 300);
       });

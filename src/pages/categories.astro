@@ -2,50 +2,57 @@
 import Layout from '../layouts/Layout.astro';
 ---
 
-<Layout title="Categorías" activeNav="categories">
-  <div class="space-y-5">
-
-    <div class="flex flex-wrap items-center justify-between gap-4">
-      <div>
-        <h2 class="text-xl font-bold text-white">Categorías</h2>
-        <p class="text-sm text-slate-500 mt-0.5">Organiza el catálogo de productos por categorías</p>
-      </div>
-      <button id="btn-new-category" class="btn-primary">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-        Nueva Categoría
-      </button>
-    </div>
-
-    <div class="glass-card rounded-xl overflow-hidden">
-      <table class="cms-table">
-        <thead><tr>
-          <th>#</th><th>Nombre</th><th>Orden</th><th>Productos</th><th class="text-right">Acciones</th>
-        </tr></thead>
-        <tbody id="categories-body">
-          <tr><td colspan="5" class="text-center py-10 text-slate-500">Cargando categorías...</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Attributes section -->
-    <div class="glass-card rounded-xl overflow-hidden">
-      <div class="flex flex-wrap items-center justify-between gap-4 px-5 py-4 border-b border-teal-900/20">
+<Layout title="Categorías y Atributos" activeNav="categories">
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+    
+    <!-- Columna Categorías -->
+    <div class="space-y-5">
+      <div class="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h3 class="text-sm font-semibold text-white">Atributos de Producto</h3>
-          <p class="text-xs text-slate-500 mt-0.5">Define los atributos disponibles para los productos</p>
+          <h2 class="text-xl font-bold text-white">Categorías</h2>
+          <p class="text-sm text-slate-500 mt-0.5">Organiza el catálogo de productos</p>
         </div>
-        <div class="flex gap-2">
-          <input id="new-attr-name" type="text" class="form-input text-xs w-40" placeholder="Nuevo atributo…" />
-          <button id="btn-add-attr" class="btn-primary text-xs py-1.5 px-3">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-            Agregar
-          </button>
-        </div>
+        <button id="btn-new-category" class="btn-primary">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          Nueva Categoría
+        </button>
       </div>
-      <div id="attributes-list" class="px-5 py-4 flex flex-wrap gap-2">
-        <p class="text-sm text-slate-500">Cargando atributos...</p>
+      <div class="glass-card rounded-xl overflow-hidden">
+        <table class="cms-table">
+          <thead><tr>
+            <th>#</th><th>Nombre</th><th>Orden</th><th class="text-right">Acciones</th>
+          </tr></thead>
+          <tbody id="categories-body">
+            <tr><td colspan="4" class="text-center py-10 text-slate-500">Cargando categorías...</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
+
+    <!-- Columna Atributos -->
+    <div class="space-y-5">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-white">Atributos</h2>
+          <p class="text-sm text-slate-500 mt-0.5">Tallas, Colores, Materiales…</p>
+        </div>
+        <button id="btn-new-attr" class="btn-primary">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          Nuevo Atributo
+        </button>
+      </div>
+      <div class="glass-card rounded-xl overflow-hidden">
+        <table class="cms-table">
+          <thead><tr>
+            <th>#</th><th>Nombre</th><th>Estado</th><th class="text-right">Acciones</th>
+          </tr></thead>
+          <tbody id="attributes-body">
+            <tr><td colspan="4" class="text-center py-10 text-slate-500">Cargando atributos...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
 
   <!-- Dialog -->
@@ -93,12 +100,54 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </dialog>
 
+  <!-- Atributo Create / Edit Dialog -->
+  <dialog id="attr-dialog">
+    <div class="modal-box max-w-sm">
+      <div class="flex items-center justify-between mb-5">
+        <h3 id="attr-dialog-title" class="text-base font-semibold text-white">Nuevo Atributo</h3>
+        <button id="close-attr-dialog" class="btn-icon btn-icon-red">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form id="attr-form" class="space-y-4" novalidate>
+        <input type="hidden" id="attr-id" />
+        <div>
+          <label class="form-label">Nombre <span class="text-red-400">*</span></label>
+          <input id="attr-name" type="text" class="form-input" placeholder="Ej: Talla, Color…" required />
+        </div>
+        <div id="attr-form-error" class="hidden rounded-lg px-4 py-3 text-sm text-red-400 bg-red-400/10 border border-red-400/25"></div>
+        <div class="flex gap-3 justify-end pt-1">
+          <button type="button" id="cancel-attr-dialog" class="btn-secondary">Cancelar</button>
+          <button type="submit" id="submit-attr" class="btn-primary">
+            <span id="attr-submit-text">Crear</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- Atributo Delete Dialog -->
+  <dialog id="delete-attr-dialog">
+    <div class="modal-box max-w-sm text-center">
+      <div class="w-14 h-14 rounded-full bg-red-500/15 border border-red-500/25 flex items-center justify-center mx-auto mb-4">
+        <svg width="24" height="24" fill="none" stroke="#f87171" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+      </div>
+      <h3 class="text-base font-semibold text-white mb-2">Eliminar Atributo</h3>
+      <p class="text-sm text-slate-400 mb-6">El atributo será desactivado del sistema.</p>
+      <input type="hidden" id="delete-attr-id" />
+      <div class="flex gap-3 justify-center">
+        <button id="cancel-delete-attr" class="btn-secondary">Cancelar</button>
+        <button id="confirm-delete-attr" class="btn-danger py-2.5 px-5">Eliminar</button>
+      </div>
+    </div>
+  </dialog>
+
   <script>
     import { api, showToast } from '../utils/api.ts';
 
     interface Category { id: string; name: string; display_order: number; }
-
     interface Product { id: string; name: string; }
+    interface Attribute { id: string; name: string; is_active: number; created_at: string; updated_at: string; }
 
     async function loadCategories() {
       const tbody = document.getElementById('categories-body')!;
@@ -106,32 +155,17 @@ import Layout from '../layouts/Layout.astro';
         const res = await api.get<Category[]>('/categories');
         const cats = res.data as Category[];
         if (cats.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-slate-500">No hay categorías registradas.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-slate-500">No hay categorías registradas.</td></tr>';
           return;
         }
 
-        // Fetch products for all categories in parallel
-        const productsPromises = cats.map(c => 
-          api.get<{data: Product[]}>(`/products?category_id=${c.id}&limit=100`)
-            .then(res => ({ id: c.id, products: res.data.data }))
-            .catch(() => ({ id: c.id, products: [] as Product[] }))
-        );
-        const productsResults = await Promise.all(productsPromises);
-        const productsByCat = Object.fromEntries(productsResults.map(r => [r.id, r.products]));
-
         let idx = 1;
         tbody.innerHTML = cats.map(c => {
-          const prods = productsByCat[c.id] || [];
-          const badges = prods.length > 0 
-            ? prods.map(p => `<span class="text-[10px] bg-teal-500/10 text-teal-300 border border-teal-500/20 rounded px-1.5 py-0.5 whitespace-nowrap">${p.name}</span>`).join(' ')
-            : '<span class="text-slate-500">—</span>';
-
           return `
           <tr>
             <td class="text-slate-600 font-mono text-xs">${idx++}</td>
             <td class="font-medium text-white">${c.name}</td>
             <td><span class="text-xs bg-slate-800 text-slate-400 rounded px-2 py-0.5">${c.display_order}</span></td>
-            <td><div class="flex flex-wrap gap-1">${badges}</div></td>
             <td>
               <div class="flex gap-1.5 justify-end">
                 <button class="btn-icon btn-icon-teal edit-cat-btn" data-id="${c.id}" data-name="${c.name}" data-order="${c.display_order}" title="Editar">
@@ -169,10 +203,68 @@ import Layout from '../layouts/Layout.astro';
       }
     }
 
+    async function loadAttributes() {
+      const tbody = document.getElementById('attributes-body')!;
+      try {
+        const res = await api.get<Attribute[]>('/attributes');
+        const attrs = res.data as Attribute[];
+        if (attrs.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-slate-500">No hay atributos.</td></tr>';
+          return;
+        }
+
+        let idx = 1;
+        tbody.innerHTML = attrs.map(a => `
+          <tr>
+            <td class="text-slate-600 font-mono text-xs">${idx++}</td>
+            <td class="font-medium text-white">${a.name}</td>
+            <td>
+              <span class="text-xs px-2 py-0.5 rounded-full font-medium ${a.is_active ? 'badge-delivered' : 'badge-cancelled'}">
+                ${a.is_active ? 'Activo' : 'Inactivo'}
+              </span>
+            </td>
+            <td>
+              <div class="flex gap-1.5 justify-end">
+                <button class="btn-icon btn-icon-teal edit-attr-btn" data-id="${a.id}" data-name="${a.name}" title="Editar">
+                  <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <button class="btn-icon btn-icon-red delete-attr-btn" data-id="${a.id}" title="Eliminar">
+                  <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+
+        document.querySelectorAll('.edit-attr-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const el = btn as HTMLElement;
+            (document.getElementById('attr-dialog-title')!).textContent = 'Editar Atributo';
+            (document.getElementById('attr-submit-text')!).textContent = 'Guardar';
+            (document.getElementById('attr-id') as HTMLInputElement).value = el.dataset.id!;
+            (document.getElementById('attr-name') as HTMLInputElement).value = el.dataset.name!;
+            (document.getElementById('attr-form-error')!).classList.add('hidden');
+            (document.getElementById('attr-dialog') as HTMLDialogElement).showModal();
+          });
+        });
+
+        document.querySelectorAll('.delete-attr-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            (document.getElementById('delete-attr-id') as HTMLInputElement).value = (btn as HTMLElement).dataset.id!;
+            (document.getElementById('delete-attr-dialog') as HTMLDialogElement).showModal();
+          });
+        });
+      } catch (err: unknown) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center py-10 text-red-400 text-sm">Error</td></tr>`;
+      }
+    }
+
     document.addEventListener('astro:page-load', () => {
       if (window.location.pathname !== '/categories') return;
       loadCategories();
+      loadAttributes();
 
+      // CATEGORIES LOGIC
       document.getElementById('btn-new-category')?.addEventListener('click', () => {
         (document.getElementById('cat-dialog-title')!).textContent = 'Nueva Categoría';
         (document.getElementById('cat-submit-text')!).textContent = 'Crear';
@@ -182,10 +274,10 @@ import Layout from '../layouts/Layout.astro';
         (document.getElementById('category-dialog') as HTMLDialogElement).showModal();
       });
 
-      const closeDialog = () => (document.getElementById('category-dialog') as HTMLDialogElement).close();
-      document.getElementById('close-cat-dialog')?.addEventListener('click', closeDialog);
-      document.getElementById('cancel-cat-dialog')?.addEventListener('click', closeDialog);
-      document.getElementById('category-dialog')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeDialog(); });
+      const closeCatDialog = () => (document.getElementById('category-dialog') as HTMLDialogElement).close();
+      document.getElementById('close-cat-dialog')?.addEventListener('click', closeCatDialog);
+      document.getElementById('cancel-cat-dialog')?.addEventListener('click', closeCatDialog);
+      document.getElementById('category-dialog')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeCatDialog(); });
 
       document.getElementById('category-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -199,7 +291,7 @@ import Layout from '../layouts/Layout.astro';
         try {
           if (id) { await api.put(`/categories/${id}`, { name, display_order }); showToast('Categoría actualizada', 'success'); }
           else { await api.post('/categories', { name, display_order }); showToast('Categoría creada', 'success'); }
-          closeDialog();
+          closeCatDialog();
           loadCategories();
         } catch (err: unknown) {
           errBox.textContent = err instanceof Error ? err.message : 'Error';
@@ -219,59 +311,52 @@ import Layout from '../layouts/Layout.astro';
         } catch (err: unknown) { showToast(err instanceof Error ? err.message : 'Error', 'error'); }
       });
 
-      // Attributes Logic
-      const attrList = document.getElementById('attributes-list')!;
-      function getAttributes() {
-        const raw = localStorage.getItem('vz_product_attributes');
-        if (raw) return JSON.parse(raw);
-        return ['Color', 'Material', 'Peso', 'Tamaño'];
-      }
-      function saveAttributes(attrs: string[]) {
-        localStorage.setItem('vz_product_attributes', JSON.stringify(attrs));
-      }
-      function renderAttributes() {
-        const attrs = getAttributes();
-        if (attrs.length === 0) {
-          attrList.innerHTML = '<p class="text-sm text-slate-500">No hay atributos definidos.</p>';
-          return;
-        }
-        attrList.innerHTML = attrs.map((a: string) => `
-          <span class="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/25 text-teal-300">
-            ${a}
-            <button class="remove-attr-btn hover:text-red-400 transition-colors" data-attr="${a}">
-              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
-            </button>
-          </span>
-        `).join('');
-
-        document.querySelectorAll('.remove-attr-btn').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const attr = (btn as HTMLElement).dataset.attr!;
-            const newAttrs = getAttributes().filter((a: string) => a !== attr);
-            saveAttributes(newAttrs);
-            renderAttributes();
-            showToast('Atributo eliminado', 'success');
-          });
-        });
-      }
-      
-      document.getElementById('btn-add-attr')?.addEventListener('click', () => {
-        const input = document.getElementById('new-attr-name') as HTMLInputElement;
-        const val = input.value.trim();
-        if (!val) return;
-        const attrs = getAttributes();
-        if (attrs.includes(val)) {
-          showToast('El atributo ya existe', 'error');
-          return;
-        }
-        attrs.push(val);
-        saveAttributes(attrs);
-        input.value = '';
-        renderAttributes();
-        showToast('Atributo agregado', 'success');
+      // ATTRIBUTES LOGIC
+      document.getElementById('btn-new-attr')?.addEventListener('click', () => {
+        (document.getElementById('attr-dialog-title')!).textContent = 'Nuevo Atributo';
+        (document.getElementById('attr-submit-text')!).textContent = 'Crear';
+        (document.getElementById('attr-id') as HTMLInputElement).value = '';
+        (document.getElementById('attr-form') as HTMLFormElement).reset();
+        (document.getElementById('attr-form-error')!).classList.add('hidden');
+        (document.getElementById('attr-dialog') as HTMLDialogElement).showModal();
       });
 
-      renderAttributes();
+      const closeAttrDialog = () => (document.getElementById('attr-dialog') as HTMLDialogElement).close();
+      document.getElementById('close-attr-dialog')?.addEventListener('click', closeAttrDialog);
+      document.getElementById('cancel-attr-dialog')?.addEventListener('click', closeAttrDialog);
+      document.getElementById('attr-dialog')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeAttrDialog(); });
+
+      document.getElementById('attr-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errBox = document.getElementById('attr-form-error')!;
+        errBox.classList.add('hidden');
+        const id = (document.getElementById('attr-id') as HTMLInputElement).value;
+        const name = (document.getElementById('attr-name') as HTMLInputElement).value.trim();
+        const btn = document.getElementById('submit-attr') as HTMLButtonElement;
+        btn.disabled = true;
+        try {
+          if (id) { await api.put(`/attributes/${id}`, { name }); showToast('Atributo actualizado', 'success'); }
+          else { await api.post('/attributes', { name }); showToast('Atributo creado', 'success'); }
+          closeAttrDialog();
+          loadAttributes();
+        } catch (err: unknown) {
+          errBox.textContent = err instanceof Error ? err.message : 'Error';
+          errBox.classList.remove('hidden');
+        } finally { btn.disabled = false; }
+      });
+
+      document.getElementById('cancel-delete-attr')?.addEventListener('click', () => (document.getElementById('delete-attr-dialog') as HTMLDialogElement).close());
+      document.getElementById('delete-attr-dialog')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) (document.getElementById('delete-attr-dialog') as HTMLDialogElement).close(); });
+      document.getElementById('confirm-delete-attr')?.addEventListener('click', async () => {
+        const id = (document.getElementById('delete-attr-id') as HTMLInputElement).value;
+        try {
+          await api.delete(`/attributes/${id}`);
+          showToast('Atributo eliminado', 'success');
+          (document.getElementById('delete-attr-dialog') as HTMLDialogElement).close();
+          loadAttributes();
+        } catch (err: unknown) { showToast(err instanceof Error ? err.message : 'Error', 'error'); }
+      });
+
     });
   </script>
 </Layout>

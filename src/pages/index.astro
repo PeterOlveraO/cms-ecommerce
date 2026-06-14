@@ -28,43 +28,6 @@ import Layout from '../layouts/Layout.astro';
       ))}
     </div>
 
-    <!-- Quick access grid -->
-    <div>
-      <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-widest mb-4">Acceso rápido</h3>
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-        {[
-          { href: '/products',        label: 'Nuevo Producto',      icon: '📦', color: 'teal' },
-          { href: '/orders',          label: 'Ver Pedidos',         icon: '📋', color: 'blue' },
-          { href: '/customers',       label: 'Ver Clientes',        icon: '👥', color: 'purple' },
-          { href: '/categories',      label: 'Categorías',          icon: '🏷️', color: 'amber' },
-          { href: '/header-images',   label: 'Banners',             icon: '🖼️', color: 'pink' },
-          { href: '/payment-methods', label: 'Métodos de Pago',     icon: '💳', color: 'green' },
-          { href: '/accounts',        label: 'Cuentas',             icon: '🔐', color: 'red' },
-        ].map(item => (
-          <a href={item.href} class="glass-card-hover rounded-xl p-4 flex flex-col gap-2 text-decoration-none group">
-            <span class="text-2xl">{item.icon}</span>
-            <span class="text-sm font-medium text-slate-300 group-hover:text-white transition-colors">{item.label}</span>
-          </a>
-        ))}
-      </div>
-    </div>
-
-    <!-- General Config -->
-    <div class="glass-card rounded-xl">
-      <div class="px-5 py-4 border-b border-teal-900/20">
-        <h3 class="text-sm font-semibold text-white">⚙️ Configuración General</h3>
-      </div>
-      <div class="px-5 py-4">
-        <div class="flex items-end gap-4 max-w-md">
-          <div class="flex-1">
-            <label class="form-label">Costo de Envío Predeterminado (MXN)</label>
-            <input id="default-shipping-cost" type="number" min="0" step="0.01" class="form-input" placeholder="400.00" />
-          </div>
-          <button id="save-shipping-cost" class="btn-primary shrink-0">Guardar</button>
-        </div>
-        <p class="text-xs text-slate-600 mt-2">Este valor se aplicará como costo de envío predeterminado en nuevos pedidos.</p>
-      </div>
-    </div>
 
     <!-- Recent orders table -->
     <div class="glass-card rounded-xl">
@@ -111,22 +74,6 @@ import Layout from '../layouts/Layout.astro';
         });
       }
 
-      // Shipping cost
-      const shippingInput = document.getElementById('default-shipping-cost') as HTMLInputElement | null;
-      if (shippingInput) {
-        shippingInput.value = localStorage.getItem('vz_default_shipping_cost') ?? '400';
-      }
-      document.getElementById('save-shipping-cost')?.addEventListener('click', () => {
-        if (shippingInput) {
-          const val = parseFloat(shippingInput.value);
-          if (!isNaN(val) && val >= 0) {
-            localStorage.setItem('vz_default_shipping_cost', val.toString());
-            showToast('Costo de envío predeterminado guardado', 'success');
-          } else {
-            showToast('Valor inválido', 'error');
-          }
-        }
-      });
 
       // Load stats in parallel
       const [ordersRes, productsRes, customersRes, bannersRes] = await Promise.allSettled([
