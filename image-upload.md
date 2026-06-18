@@ -1,4 +1,4 @@
-# Manejo de Imágenes en Ecommerce Angel
+# Manejo de Imágenes en Ecommerce
 
 Esta guía detalla cómo funciona el servicio de almacenamiento de imágenes en la API y cómo interactuar con él desde el frontend (CMS o Tienda).
 
