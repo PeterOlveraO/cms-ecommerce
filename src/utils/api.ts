@@ -72,6 +72,8 @@ export interface ApiResponse<T = unknown> {
 
 export type ApiError = { success: false; message: string };
 
+const FETCH_TIMEOUT_MS = 10_000; // 10 segundos
+
 async function apiFetch<T>(
   path: string,
   options: RequestInit = {},
@@ -85,7 +87,25 @@ async function apiFetch<T>(
     ...(options.headers ?? {}),
   };
 
-  const res = await fetch(`${getApiUrl()}${path}`, { ...options, headers });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  let res: Response;
+  try {
+    res = await fetch(`${getApiUrl()}${path}`, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
+  } catch (err: unknown) {
+    clearTimeout(timeoutId);
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new Error(`La solicitud tardó demasiado (>${FETCH_TIMEOUT_MS / 1000}s). Verifica que la API esté activa.`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   // ── Auto-refresh on 401 ──────────────────────────────────
   if (res.status === 401 && retry) {
@@ -103,7 +123,6 @@ async function apiFetch<T>(
 
       return apiFetch<T>(path, options, false);
     } else {
-      // Queue simultaneous requests until refresh completes
       const newToken = await new Promise<string | null>((resolve) => {
         pendingResolvers.push(resolve);
       });
@@ -150,19 +169,10 @@ export const api = {
 };
 
 // ── Image upload ─────────────────────────────────────────────
-/**
- * Sube una imagen al endpoint POST /upload.
- * Formatos permitidos por el backend: JPEG, PNG, WEBP, GIF (máx 5 MB).
- * Devuelve la URL absoluta de la imagen almacenada en el servidor.
- * Ej: "http://localhost:3000/uploads/ab3f9...1.jpg"
- */
 export const uploadImage = async (file: File): Promise<string> => {
-  // Helper interno para construir y ejecutar el fetch de subida
   const doFetch = (authToken: string | null): Promise<Response> => {
     const fd = new FormData();
-    // ⚠️ El backend espera el campo con el nombre exacto "image"
     fd.append("image", file);
-    // NO ponemos Content-Type manualmente: el navegador agrega el boundary correcto
     const h: HeadersInit = authToken
       ? { Authorization: `Bearer ${authToken}` }
       : {};
@@ -173,13 +183,11 @@ export const uploadImage = async (file: File): Promise<string> => {
     });
   };
 
-  // Helper para parsear la respuesta de forma segura (la respuesta puede ser HTML en errores 5xx)
   const parseResponse = async (res: Response): Promise<string> => {
     let json: Record<string, unknown> | null = null;
     try {
       json = await res.json();
     } catch {
-      // El servidor no devolvió JSON válido (p.ej. página HTML de error 5xx)
       throw new Error(
         `Error del servidor (HTTP ${res.status}). Verifica que el backend esté activo.`,
       );
@@ -200,7 +208,6 @@ export const uploadImage = async (file: File): Promise<string> => {
 
   let res = await doFetch(getAccessToken());
 
-  // Auto-refresh si el token expiró durante la subida
   if (res.status === 401) {
     const newToken = await tryRefresh();
     if (!newToken) {
