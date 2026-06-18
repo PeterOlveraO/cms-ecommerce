@@ -1,0 +1,1041 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="Productos" activeNav="products">
+    <div class="space-y-5">
+        <!-- Header -->
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+                <h2 class="text-xl font-bold text-white">
+                    Inventario de Productos
+                </h2>
+                <p class="text-sm text-slate-500 mt-0.5">
+                    Crea, edita y gestiona los productos del catálogo
+                </p>
+            </div>
+            <button id="btn-new-product" class="btn-primary">
+                <svg
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg
+                >
+                Nuevo Producto
+            </button>
+        </div>
+
+        <!-- Filters -->
+        <div
+            class="glass-card rounded-xl px-5 py-4 flex flex-wrap gap-3 items-center"
+        >
+            <div class="relative flex-1 min-w-48">
+                <span
+                    class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+                >
+                    <svg
+                        width="14"
+                        height="14"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        viewBox="0 0 24 24"
+                        ><circle cx="11" cy="11" r="8"></circle><path
+                            d="m21 21-4.35-4.35"></path></svg
+                    >
+                </span>
+                <input
+                    id="search-input"
+                    type="text"
+                    placeholder="Buscar por nombre o marca…"
+                    class="form-input pl-8 text-sm"
+                />
+            </div>
+            <select
+                id="category-filter"
+                class="form-input text-sm w-auto min-w-40"
+            >
+                <option value="">Todas las categorías</option>
+            </select>
+            <select id="visibility-filter" class="form-input text-sm w-auto">
+                <option value="">Todas las visibilidades</option>
+                <option value="visible">Solo Visibles</option>
+                <option value="hidden">Solo Ocultos</option>
+            </select>
+        </div>
+
+        <!-- Table -->
+        <div class="glass-card rounded-xl overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="cms-table" id="products-table">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Precio</th>
+                            <th>Oferta</th>
+                            <th>Stock</th>
+                            <th>Visibilidad</th>
+                            <th class="text-right">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="products-body">
+                        <tr
+                            ><td
+                                colspan="6"
+                                class="text-center py-10 text-slate-500"
+                                >Cargando productos...</td
+                            ></tr
+                        >
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div
+                class="flex items-center justify-between px-5 py-3 border-t border-teal-900/20"
+            >
+                <span id="pagination-info" class="text-xs text-slate-500"
+                ></span>
+                <div class="flex gap-2">
+                    <button
+                        id="prev-page"
+                        class="btn-secondary text-xs py-1.5 px-3 disabled:opacity-40"
+                        disabled>← Anterior</button
+                    >
+                    <button
+                        id="next-page"
+                        class="btn-secondary text-xs py-1.5 px-3 disabled:opacity-40"
+                        disabled>Siguiente →</button
+                    >
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── Create / Edit Dialog ─────────────────────────────── -->
+    <dialog id="product-dialog">
+        <div class="modal-box max-w-xl">
+            <div class="flex items-center justify-between mb-5">
+                <h3
+                    id="dialog-title"
+                    class="text-base font-semibold text-white"
+                >
+                    Nuevo Producto
+                </h3>
+                <button id="close-dialog" class="btn-icon btn-icon-red">
+                    <svg
+                        width="14"
+                        height="14"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2.5"
+                        viewBox="0 0 24 24"
+                        ><path d="M18 6 6 18M6 6l12 12"></path></svg
+                    >
+                </button>
+            </div>
+
+            <form id="product-form" class="space-y-4" novalidate>
+                <input type="hidden" id="product-id" />
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="form-label"
+                            >Nombre <span class="text-red-400">*</span></label
+                        >
+                        <input
+                            id="f-name"
+                            type="text"
+                            class="form-input"
+                            placeholder="SMOK Nord 5"
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label class="form-label"
+                            >Marca <span class="text-red-400">*</span></label
+                        >
+                        <input
+                            id="f-brand"
+                            type="text"
+                            class="form-input"
+                            placeholder="SMOK"
+                            required
+                        />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="form-label">Descripción</label>
+                    <textarea
+                        id="f-description"
+                        class="form-input resize-none"
+                        rows="2"
+                        placeholder="Descripción del producto…"></textarea>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="form-label"
+                            >Precio <span class="text-red-400">*</span></label
+                        >
+                        <input
+                            id="f-price"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            class="form-input"
+                            placeholder="1299.00"
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label class="form-label">Precio Oferta</label>
+                        <input
+                            id="f-sale-price"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            class="form-input"
+                            placeholder="999.00"
+                        />
+                    </div>
+                    <div>
+                        <label class="form-label">Stock</label>
+                        <input
+                            id="f-stock"
+                            type="number"
+                            min="0"
+                            class="form-input"
+                            placeholder="30"
+                            value="0"
+                        />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="form-label">Imagen del Producto</label>
+                        <!-- Hidden field that always holds the final URL -->
+                        <input type="hidden" id="f-image-url" />
+
+                        <!-- Preview card -->
+                        <div id="f-image-preview-wrap" class="hidden mb-2 relative">
+                            <img
+                                id="f-image-preview"
+                                src=""
+                                alt="Preview"
+                                class="w-full h-28 object-cover rounded-lg bg-slate-800 border border-teal-900/30"
+                            />
+                            <button
+                                type="button"
+                                id="f-image-clear"
+                                class="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/70 text-slate-300 hover:text-white flex items-center justify-center text-xs leading-none"
+                                title="Quitar imagen"
+                            >✕</button>
+                        </div>
+
+                        <!-- File picker -->
+                        <label
+                            id="f-image-file-label"
+                            class="flex items-center gap-2 cursor-pointer btn-secondary w-full text-xs py-2 mb-2"
+                        >
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            <span id="f-image-file-label-text">Seleccionar archivo…</span>
+                            <input
+                                id="f-image-file"
+                                type="file"
+                                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                class="sr-only"
+                            />
+                        </label>
+
+                        <!-- URL manual fallback -->
+                        <input
+                            id="f-image-url-manual"
+                            type="url"
+                            class="form-input text-xs"
+                            placeholder="O pega una URL externa…"
+                        />
+                    </div>
+                    <div>
+                        <label class="form-label"
+                            >Orden de Despliegue <span class="text-red-400"
+                                >*</span
+                            ></label
+                        >
+                        <input
+                            id="f-display-order"
+                            type="number"
+                            min="0"
+                            class="form-input"
+                            placeholder="1"
+                            value="1"
+                            required
+                        />
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <label class="form-label mb-0">Visible en Tienda</label>
+                    <label
+                        class="relative inline-flex items-center cursor-pointer"
+                    >
+                        <input
+                            type="checkbox"
+                            id="f-featured"
+                            class="sr-only peer"
+                        />
+                        <div
+                            class="w-9 h-5 bg-slate-700 peer-focus:ring-2 peer-focus:ring-teal-500/30 rounded-full peer peer-checked:bg-teal-600 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"
+                        >
+                        </div>
+                    </label>
+                </div>
+
+                <div>
+                    <label class="form-label">Atributos del Producto</label>
+                    <div id="attributes-checkboxes" class="space-y-2 mt-1">
+                        <span class="text-xs text-slate-500"
+                            >Cargando atributos…</span
+                        >
+                    </div>
+                </div>
+
+                <div>
+                    <label class="form-label">Categorías</label>
+                    <div
+                        id="categories-checkboxes"
+                        class="flex flex-wrap gap-2 mt-1"
+                    >
+                        <span class="text-xs text-slate-500"
+                            >Cargando categorías…</span
+                        >
+                    </div>
+                </div>
+
+                <div
+                    id="form-error"
+                    class="hidden rounded-lg px-4 py-3 text-sm text-red-400 bg-red-400/10 border border-red-400/25"
+                >
+                </div>
+
+                <div class="flex gap-3 justify-end pt-2">
+                    <button
+                        type="button"
+                        id="cancel-dialog"
+                        class="btn-secondary">Cancelar</button
+                    >
+                    <button
+                        type="submit"
+                        id="submit-product"
+                        class="btn-primary"
+                    >
+                        <span id="submit-text">Crear Producto</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </dialog>
+
+    <!-- ─── Delete confirmation dialog ────────────────────────── -->
+    <dialog id="delete-dialog">
+        <div class="modal-box max-w-sm text-center">
+            <div
+                class="w-14 h-14 rounded-full bg-red-500/15 border border-red-500/25 flex items-center justify-center mx-auto mb-4"
+            >
+                <svg
+                    width="24"
+                    height="24"
+                    fill="none"
+                    stroke="#f87171"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                >
+                    <polyline points="3 6 5 6 21 6"></polyline><path
+                        d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"
+                    ></path>
+                    <path d="M10 11v6M14 11v6"></path><path
+                        d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+                </svg>
+            </div>
+            <h3 class="text-base font-semibold text-white mb-2">
+                Eliminar Producto
+            </h3>
+            <p class="text-sm text-slate-400 mb-6">
+                El producto será desactivado del catálogo. Esta acción puede
+                revertirse desde la API.
+            </p>
+            <input type="hidden" id="delete-product-id" />
+            <div class="flex gap-3 justify-center">
+                <button id="cancel-delete" class="btn-secondary"
+                    >Cancelar</button
+                >
+                <button id="confirm-delete" class="btn-danger py-2.5 px-5"
+                    >Eliminar</button
+                >
+            </div>
+        </div>
+    </dialog>
+
+    <script>
+        import { api, uploadImage, showToast } from "../utils/api.ts";
+
+        interface Category {
+            id: string;
+            name: string;
+            display_order: number;
+        }
+        interface Product {
+            id: string;
+            name: string;
+            brand: string;
+            description?: string;
+            price: number;
+            sale_price?: number;
+            stock: number;
+            image_url: string;
+            display_order: number;
+            is_active: boolean;
+            featured?: boolean;
+            details?: Record<string, unknown>;
+            category_ids?: string[];
+            categories?: Array<{ id: string; name: string }> | string;
+        }
+        interface Pagination {
+            total: number;
+            page: number;
+            limit: number;
+            total_pages: number;
+        }
+
+        let currentPage = 1;
+        let totalPages = 1;
+        let searchQuery = "";
+        let categoryFilter = "";
+        let allCategories: Category[] = [];
+
+        // ── Load categories for filter + checkboxes ────────────────
+        async function loadCategories() {
+            try {
+                const res = await api.get<Category[]>("/categories");
+                allCategories = res.data as Category[];
+                const sel = document.getElementById(
+                    "category-filter",
+                ) as HTMLSelectElement;
+                allCategories.forEach((cat) => {
+                    const opt = document.createElement("option");
+                    opt.value = cat.id;
+                    opt.textContent = cat.name;
+                    sel.appendChild(opt);
+                });
+            } catch {
+                /* non-critical */
+            }
+        }
+
+        // ── Render products ────────────────────────────────────────
+        async function loadProducts(page = 1) {
+            const tbody = document.getElementById("products-body")!;
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-10"><div class="inline-flex gap-2 text-slate-500"><span>Cargando</span><span class="animate-spin">⏳</span></div></td></tr>`;
+
+            const params = new URLSearchParams({
+                page: String(page),
+                limit: "12",
+            });
+            if (searchQuery) params.set("search", searchQuery);
+            if (categoryFilter) params.set("category_id", categoryFilter);
+
+            try {
+                const res = await api.get<Product[]>(`/products?${params}`);
+                const products = res.data as Product[];
+                const pagination = res.pagination as Pagination;
+                currentPage = pagination.page;
+                totalPages = pagination.total_pages;
+
+                const visibilityFilter = (
+                    document.getElementById(
+                        "visibility-filter",
+                    ) as HTMLSelectElement
+                ).value;
+                const filtered =
+                    visibilityFilter === "visible"
+                        ? products.filter((p) => !p.featured)
+                        : visibilityFilter === "hidden"
+                          ? products.filter((p) => p.featured)
+                          : products;
+
+                if (filtered.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-10 text-slate-500">No se encontraron productos.</td></tr>`;
+                } else {
+                    tbody.innerHTML = filtered
+                        .map(
+                            (p) => `
+            <tr>
+              <td>
+                <div class="flex items-center gap-3">
+                  <img src="${p.image_url || ""}" alt="${p.name}" class="w-10 h-10 rounded-lg object-cover bg-slate-800" onerror="this.src='data:image/svg+xml,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;40&quot; height=&quot;40&quot; viewBox=&quot;0 0 24 24&quot; fill=&quot;%231e293b&quot;><rect width=&quot;24&quot; height=&quot;24&quot; rx=&quot;4&quot;/></svg>'" />
+                  <div>
+                    <p class="font-medium text-white text-sm">${p.name}</p>
+                    <p class="text-xs text-slate-500">${p.brand}</p>
+                  </div>
+                </div>
+              </td>
+              <td class="font-semibold text-white">$${Number(p.price).toLocaleString("es-MX", { minimumFractionDigits: 2 })}</td>
+              <td>${p.sale_price ? `<span class="text-teal-400 font-medium">$${Number(p.sale_price).toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>` : `<span class="text-slate-600">—</span>`}</td>
+              <td><span class="font-mono ${p.stock <= 5 ? "text-red-400" : "text-slate-300"}">${p.stock}</span></td>
+              <td>
+                <button class="toggle-featured-btn text-xs px-2.5 py-1 rounded-full font-medium cursor-pointer border transition-all duration-200 hover:scale-105 ${p.featured ? "bg-red-500/15 text-red-400 border-red-500/30 hover:bg-red-500/25" : "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25"}" data-id="${p.id}" data-featured="${p.featured ? "true" : "false"}" title="${p.featured ? "Clic para mostrar en la tienda" : "Clic para ocultar de la tienda"}">
+                  ${p.featured ? "● Oculto" : "● Visible"}
+                </button>
+              </td>
+              <td>
+                <div class="flex gap-1.5 justify-end">
+                  <button class="btn-icon btn-icon-teal edit-btn" data-id="${p.id}" title="Editar">
+                    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
+                  <button class="btn-icon btn-icon-red delete-btn" data-id="${p.id}" title="Eliminar">
+                    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `,
+                        )
+                        .join("");
+                    attachRowListeners();
+                }
+
+                // Pagination
+                document.getElementById("pagination-info")!.textContent =
+                    `Página ${currentPage} de ${totalPages} — ${pagination.total} productos`;
+                (
+                    document.getElementById("prev-page") as HTMLButtonElement
+                ).disabled = currentPage <= 1;
+                (
+                    document.getElementById("next-page") as HTMLButtonElement
+                ).disabled = currentPage >= totalPages;
+            } catch (err: unknown) {
+                const msg =
+                    err instanceof Error
+                        ? err.message
+                        : "Error al cargar productos";
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-10 text-red-400 text-sm">${msg}</td></tr>`;
+            }
+        }
+
+        // ── Open create dialog ─────────────────────────────────────
+        async function openCreateDialog() {
+            (
+                document.getElementById("dialog-title") as HTMLElement
+            ).textContent = "Nuevo Producto";
+            (
+                document.getElementById("submit-text") as HTMLElement
+            ).textContent = "Crear Producto";
+            (document.getElementById("product-id") as HTMLInputElement).value = "";
+            (document.getElementById("product-form") as HTMLFormElement).reset();
+            (document.getElementById("f-featured") as HTMLInputElement).checked = true;
+            // Reset image picker
+            (document.getElementById('f-image-url') as HTMLInputElement).value = '';
+            (document.getElementById('f-image-url-manual') as HTMLInputElement).value = '';
+            document.getElementById('f-image-preview-wrap')!.classList.add('hidden');
+            (document.getElementById('f-image-file-label-text')!).textContent = 'Seleccionar archivo…';
+            renderCategoryCheckboxes([]);
+            await renderAttributeCheckboxes({});
+            (document.getElementById("form-error") as HTMLElement).classList.add("hidden");
+            (document.getElementById("product-dialog") as HTMLDialogElement).showModal();
+        }
+
+        // ── Open edit dialog ───────────────────────────────────────
+        async function openEditDialog(id: string) {
+            (
+                document.getElementById("dialog-title") as HTMLElement
+            ).textContent = "Editar Producto";
+            (
+                document.getElementById("submit-text") as HTMLElement
+            ).textContent = "Guardar Cambios";
+            (
+                document.getElementById("product-dialog") as HTMLDialogElement
+            ).showModal();
+
+            try {
+                const res = await api.get<Product>(`/products/${id}`);
+                const p = res.data as Product;
+
+                (
+                    document.getElementById("product-id") as HTMLInputElement
+                ).value = p.id;
+                (document.getElementById("f-name") as HTMLInputElement).value =
+                    p.name;
+                (document.getElementById("f-brand") as HTMLInputElement).value =
+                    p.brand;
+                (
+                    document.getElementById(
+                        "f-description",
+                    ) as HTMLTextAreaElement
+                ).value = p.description ?? "";
+                (document.getElementById("f-price") as HTMLInputElement).value =
+                    String(p.price);
+                (
+                    document.getElementById("f-sale-price") as HTMLInputElement
+                ).value = p.sale_price ? String(p.sale_price) : "";
+                (document.getElementById("f-stock") as HTMLInputElement).value =
+                    String(p.stock);
+                // Populate image field and show preview for existing image
+                (document.getElementById('f-image-url') as HTMLInputElement).value = p.image_url ?? '';
+                (document.getElementById('f-image-url-manual') as HTMLInputElement).value = p.image_url ?? '';
+                const prevWrap = document.getElementById('f-image-preview-wrap')!;
+                const prevImg  = document.getElementById('f-image-preview') as HTMLImageElement;
+                const fileLabel = document.getElementById('f-image-file-label-text')!;
+                if (p.image_url) {
+                    prevImg.src = p.image_url;
+                    prevWrap.classList.remove('hidden');
+                    fileLabel.textContent = 'Cambiar archivo…';
+                } else {
+                    prevWrap.classList.add('hidden');
+                    fileLabel.textContent = 'Seleccionar archivo…';
+                }
+                (
+                    document.getElementById(
+                        "f-display-order",
+                    ) as HTMLInputElement
+                ).value = String(p.display_order);
+                (
+                    document.getElementById("f-featured") as HTMLInputElement
+                ).checked = !p.featured;
+
+                let categoryIds: string[] = [];
+                if (p.categories) {
+                    try {
+                        const cats =
+                            typeof p.categories === "string"
+                                ? JSON.parse(p.categories)
+                                : p.categories;
+                        categoryIds = (cats as Array<{ id: string }>)
+                            .filter((c) => c !== null)
+                            .map((c) => c.id);
+                    } catch {
+                        /* ignore */
+                    }
+                }
+                renderCategoryCheckboxes(categoryIds);
+
+                const parsedDetails = p.details
+                    ? typeof p.details === "string"
+                        ? JSON.parse(p.details)
+                        : p.details
+                    : {};
+                await renderAttributeCheckboxes(
+                    parsedDetails as Record<string, string>,
+                );
+            } catch (err: unknown) {
+                showToast(
+                    err instanceof Error
+                        ? err.message
+                        : "Error al cargar producto",
+                    "error",
+                );
+                (
+                    document.getElementById(
+                        "product-dialog",
+                    ) as HTMLDialogElement
+                ).close();
+            }
+        }
+
+        // ── Category checkboxes ────────────────────────────────────
+        function renderCategoryCheckboxes(selected: string[]) {
+            const container = document.getElementById("categories-checkboxes")!;
+            if (allCategories.length === 0) {
+                container.innerHTML =
+                    '<span class="text-xs text-slate-500">No hay categorías disponibles.</span>';
+                return;
+            }
+            container.innerHTML = allCategories
+                .map(
+                    (cat) => `
+        <label class="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg cursor-pointer border transition-colors ${selected.includes(cat.id) ? "bg-teal-500/15 border-teal-500/30 text-teal-300" : "bg-slate-800/50 border-slate-700 text-slate-400 hover:border-slate-600"}">
+          <input type="checkbox" name="cat-ids" value="${cat.id}" ${selected.includes(cat.id) ? "checked" : ""} class="accent-teal-500" />
+          ${cat.name}
+        </label>
+      `,
+                )
+                .join("");
+        }
+
+        // ── Attribute checkboxes (API-based) ──────────────────────
+        interface Attribute {
+            id: string;
+            name: string;
+        }
+
+        async function renderAttributeCheckboxes(
+            currentDetails: Record<string, string>,
+        ) {
+            const container = document.getElementById("attributes-checkboxes")!;
+            try {
+                const res = await api.get<Attribute[]>("/attributes");
+                const attrs = (res.data as Attribute[]).map((a) => a.name);
+                if (attrs.length === 0) {
+                    container.innerHTML =
+                        '<span class="text-xs text-slate-500">No hay atributos definidos.</span>';
+                    return;
+                }
+                container.innerHTML = attrs
+                    .map((attr) => {
+                        const hasVal = currentDetails[attr] !== undefined;
+                        const val = currentDetails[attr] || "";
+                        return `
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400 w-20 shrink-0">${attr}</span>
+              <input type="text" name="attr-value" data-attr="${attr}" class="form-input text-xs flex-1" placeholder="Valor (ej. S, M, L)…" value="${val}" />
+            </div>
+          `;
+                    })
+                    .join("");
+            } catch {
+                container.innerHTML =
+                    '<span class="text-xs text-red-400">Error al cargar atributos.</span>';
+            }
+        }
+
+        // ── Attach table row listeners ─────────────────────────────
+        function attachRowListeners() {
+            document.querySelectorAll(".edit-btn").forEach((btn) => {
+                btn.addEventListener("click", () =>
+                    openEditDialog((btn as HTMLElement).dataset.id!),
+                );
+            });
+            document.querySelectorAll(".delete-btn").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    (
+                        document.getElementById(
+                            "delete-product-id",
+                        ) as HTMLInputElement
+                    ).value = (btn as HTMLElement).dataset.id!;
+                    (
+                        document.getElementById(
+                            "delete-dialog",
+                        ) as HTMLDialogElement
+                    ).showModal();
+                });
+            });
+            // ── Toggle featured (visibility) ──────────────────────────
+            document.querySelectorAll(".toggle-featured-btn").forEach((btn) => {
+                btn.addEventListener("click", async () => {
+                    const el = btn as HTMLButtonElement;
+                    const id = el.dataset.id!;
+                    const currentFeatured = el.dataset.featured === "true";
+                    const newFeatured = !currentFeatured;
+                    el.disabled = true;
+                    el.style.opacity = "0.5";
+                    try {
+                        await api.put(`/products/${id}`, {
+                            featured: newFeatured,
+                        });
+                        showToast(
+                            newFeatured
+                                ? "Producto oculto de la tienda"
+                                : "Producto visible en la tienda",
+                            "success",
+                        );
+                        loadProducts(currentPage);
+                    } catch (err: unknown) {
+                        showToast(
+                            err instanceof Error
+                                ? err.message
+                                : "Error al cambiar visibilidad",
+                            "error",
+                        );
+                        el.disabled = false;
+                        el.style.opacity = "1";
+                    }
+                });
+            });
+        }
+
+        // ── Form submit ────────────────────────────────────────────
+        document
+            .getElementById("product-form")
+            ?.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const errBox = document.getElementById("form-error")!;
+                errBox.classList.add("hidden");
+                const id = (
+                    document.getElementById("product-id") as HTMLInputElement
+                ).value;
+                const name = (
+                    document.getElementById("f-name") as HTMLInputElement
+                ).value.trim();
+                const brand = (
+                    document.getElementById("f-brand") as HTMLInputElement
+                ).value.trim();
+                const price = parseFloat(
+                    (document.getElementById("f-price") as HTMLInputElement)
+                        .value,
+                );
+                const salePrice = (
+                    document.getElementById("f-sale-price") as HTMLInputElement
+                ).value;
+                const stock = parseInt(
+                    (document.getElementById("f-stock") as HTMLInputElement)
+                        .value || "0",
+                );
+                const imageUrl = (
+                    document.getElementById("f-image-url") as HTMLInputElement
+                ).value.trim() || (document.getElementById('f-image-url-manual') as HTMLInputElement).value.trim();
+                const displayOrder = parseInt(
+                    (
+                        document.getElementById(
+                            "f-display-order",
+                        ) as HTMLInputElement
+                    ).value || "1",
+                );
+                const description = (
+                    document.getElementById(
+                        "f-description",
+                    ) as HTMLTextAreaElement
+                ).value.trim();
+                const featured = !(
+                    document.getElementById("f-featured") as HTMLInputElement
+                ).checked;
+
+                const details: Record<string, string> = {};
+                document
+                    .querySelectorAll<HTMLInputElement>(
+                        'input[name="attr-value"]',
+                    )
+                    .forEach((input) => {
+                        const val = input.value.trim();
+                        if (val) {
+                            details[input.dataset.attr!] = val;
+                        }
+                    });
+
+                const categoryIds = Array.from(
+                    document.querySelectorAll<HTMLInputElement>(
+                        'input[name="cat-ids"]:checked',
+                    ),
+                ).map((cb) => cb.value);
+
+                if (salePrice && parseFloat(salePrice) >= price) {
+                    errBox.textContent =
+                        "El precio de oferta debe ser menor al precio regular.";
+                    errBox.classList.remove("hidden");
+                    return;
+                }
+
+                const body: Record<string, unknown> = {
+                    name,
+                    brand,
+                    price,
+                    stock,
+                    display_order: displayOrder,
+                    featured,
+                    ...(imageUrl && { image_url: imageUrl }),
+                    ...(description && { description }),
+                    ...(salePrice && { sale_price: parseFloat(salePrice) }),
+                    ...(Object.keys(details).length > 0 && { details }),
+                    ...(categoryIds.length && { category_ids: categoryIds }),
+                };
+
+                const submitBtn = document.getElementById(
+                    "submit-product",
+                ) as HTMLButtonElement;
+                submitBtn.disabled = true;
+                try {
+                    if (id) {
+                        await api.put(`/products/${id}`, body);
+                        showToast(
+                            "Producto actualizado correctamente",
+                            "success",
+                        );
+                    } else {
+                        await api.post("/products", body);
+                        showToast("Producto creado correctamente", "success");
+                    }
+                    (
+                        document.getElementById(
+                            "product-dialog",
+                        ) as HTMLDialogElement
+                    ).close();
+                    loadProducts(currentPage);
+                } catch (err: unknown) {
+                    errBox.textContent =
+                        err instanceof Error
+                            ? err.message
+                            : "Error al guardar producto";
+                    errBox.classList.remove("hidden");
+                } finally {
+                    submitBtn.disabled = false;
+                }
+            });
+
+        // ── Delete confirm ─────────────────────────────────────────
+        document
+            .getElementById("confirm-delete")
+            ?.addEventListener("click", async () => {
+                const id = (
+                    document.getElementById(
+                        "delete-product-id",
+                    ) as HTMLInputElement
+                ).value;
+                try {
+                    await api.delete(`/products/${id}`);
+                    showToast("Producto eliminado del catálogo", "success");
+                    (
+                        document.getElementById(
+                            "delete-dialog",
+                        ) as HTMLDialogElement
+                    ).close();
+                    loadProducts(currentPage);
+                } catch (err: unknown) {
+                    showToast(
+                        err instanceof Error
+                            ? err.message
+                            : "Error al eliminar",
+                        "error",
+                    );
+                }
+            });
+
+        // ── Event wiring ───────────────────────────────────────────
+        document.addEventListener("astro:page-load", () => {
+            if (window.location.pathname !== "/products") return;
+
+            loadCategories().then(() => loadProducts());
+
+            document
+                .getElementById("btn-new-product")
+                ?.addEventListener("click", openCreateDialog);
+
+            // ── Image picker wiring ────────────────────────────────
+            const fileInput   = document.getElementById('f-image-file') as HTMLInputElement;
+            const urlHidden   = document.getElementById('f-image-url') as HTMLInputElement;
+            const urlManual   = document.getElementById('f-image-url-manual') as HTMLInputElement;
+            const prevWrap    = document.getElementById('f-image-preview-wrap')!;
+            const prevImg     = document.getElementById('f-image-preview') as HTMLImageElement;
+            const clearBtn    = document.getElementById('f-image-clear')!;
+            const fileLabelTx = document.getElementById('f-image-file-label-text')!;
+
+            fileInput?.addEventListener('change', async () => {
+                const file = fileInput.files?.[0];
+                if (!file) return;
+
+                // Show loading state
+                fileLabelTx.textContent = 'Subiendo imagen…';
+                prevWrap.classList.add('hidden');
+                urlHidden.value = '';
+
+                try {
+                    const absoluteUrl = await uploadImage(file);
+                    urlHidden.value   = absoluteUrl;
+                    urlManual.value   = '';
+                    prevImg.src       = absoluteUrl;
+                    prevWrap.classList.remove('hidden');
+                    fileLabelTx.textContent = file.name.length > 22 ? file.name.slice(0, 20) + '…' : file.name;
+                    showToast('Imagen subida correctamente', 'success');
+                } catch (err: unknown) {
+                    fileInput.value = '';
+                    fileLabelTx.textContent = 'Seleccionar archivo…';
+                    showToast(err instanceof Error ? err.message : 'Error al subir imagen', 'error');
+                }
+            });
+
+            urlManual?.addEventListener('input', () => {
+                const val = urlManual.value.trim();
+                urlHidden.value = val;
+                if (val) {
+                    prevImg.src = val;
+                    prevWrap.classList.remove('hidden');
+                    fileLabelTx.textContent = 'Seleccionar archivo…';
+                    // clear file input
+                    fileInput.value = '';
+                } else {
+                    prevWrap.classList.add('hidden');
+                    urlHidden.value = '';
+                }
+            });
+
+            clearBtn?.addEventListener('click', () => {
+                urlHidden.value = '';
+                urlManual.value = '';
+                fileInput.value = '';
+                prevWrap.classList.add('hidden');
+                fileLabelTx.textContent = 'Seleccionar archivo…';
+            });
+
+            const closeDialog = () =>
+                (
+                    document.getElementById(
+                        "product-dialog",
+                    ) as HTMLDialogElement
+                ).close();
+            document
+                .getElementById("close-dialog")
+                ?.addEventListener("click", closeDialog);
+            document
+                .getElementById("cancel-dialog")
+                ?.addEventListener("click", closeDialog);
+            document
+                .getElementById("product-dialog")
+                ?.addEventListener("click", (e) => {
+                    if (e.target === e.currentTarget) closeDialog();
+                });
+
+            document
+                .getElementById("cancel-delete")
+                ?.addEventListener("click", () =>
+                    (
+                        document.getElementById(
+                            "delete-dialog",
+                        ) as HTMLDialogElement
+                    ).close(),
+                );
+            document
+                .getElementById("delete-dialog")
+                ?.addEventListener("click", (e) => {
+                    if (e.target === e.currentTarget)
+                        (
+                            document.getElementById(
+                                "delete-dialog",
+                            ) as HTMLDialogElement
+                        ).close();
+                });
+
+            let searchTimer: ReturnType<typeof setTimeout>;
+            document
+                .getElementById("search-input")
+                ?.addEventListener("input", (e) => {
+                    clearTimeout(searchTimer);
+                    searchTimer = setTimeout(() => {
+                        searchQuery = (e.target as HTMLInputElement).value;
+                        loadProducts(1);
+                    }, 400);
+                });
+
+            document
+                .getElementById("category-filter")
+                ?.addEventListener("change", (e) => {
+                    categoryFilter = (e.target as HTMLSelectElement).value;
+                    loadProducts(1);
+                });
+            document
+                .getElementById("visibility-filter")
+                ?.addEventListener("change", () => loadProducts(currentPage));
+
+            document
+                .getElementById("prev-page")
+                ?.addEventListener("click", () => {
+                    if (currentPage > 1) loadProducts(currentPage - 1);
+                });
+            document
+                .getElementById("next-page")
+                ?.addEventListener("click", () => {
+                    if (currentPage < totalPages) loadProducts(currentPage + 1);
+                });
+        });
+    </script>
+</Layout>

@@ -1,0 +1,324 @@
+---
+import "../styles/global.css";
+---
+
+<!doctype html>
+<html lang="es">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="robots" content="noindex, nofollow" />
+        <meta name="description" content="CMS" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
+        <title>Iniciar Sesión</title>
+    </head>
+
+    <body
+        class="min-h-dvh bg-surface-950 flex items-center justify-center p-4 relative overflow-hidden"
+    >
+        <!-- Background decorative blobs -->
+        <div class="absolute inset-0 overflow-hidden pointer-events-none">
+            <div
+                class="absolute -top-40 -left-40 w-96 h-96 rounded-full opacity-10"
+                style="background: radial-gradient(circle, #14b8a6, transparent);"
+            >
+            </div>
+            <div
+                class="absolute -bottom-32 -right-32 w-80 h-80 rounded-full opacity-8"
+                style="background: radial-gradient(circle, #0d9488, transparent);"
+            >
+            </div>
+            <div
+                class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-5"
+                style="background: radial-gradient(circle, #2dd4bf, transparent);"
+            >
+            </div>
+        </div>
+
+        <!-- Grid lines decoration -->
+        <div
+            class="absolute inset-0 opacity-[0.03] pointer-events-none"
+            style="background-image: linear-gradient(rgba(45,212,191,1) 1px, transparent 1px), linear-gradient(90deg, rgba(45,212,191,1) 1px, transparent 1px); background-size: 40px 40px;"
+        >
+        </div>
+
+        <!-- Login card -->
+        <div class="relative w-full max-w-md animate-fade-in-up">
+            <div
+                class="glass-card rounded-2xl p-8"
+                style="box-shadow: 0 0 60px rgba(20,184,166,0.08), 0 25px 50px rgba(0,0,0,0.5);"
+            >
+                <!-- Header -->
+                <div class="flex flex-col items-center mb-8">
+                    <div
+                        class="w-14 h-14 rounded-2xl bg-gradient-brand flex items-center justify-center glow-teal mb-4"
+                    >
+                        <svg
+                            width="28"
+                            height="28"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="white"
+                            stroke-width="2.5"
+                        >
+                            <path d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                    </div>
+                    <h1 class="text-2xl font-bold text-white text-glow-teal">
+                        Panel de Administración
+                    </h1>
+                </div>
+
+                <!-- Form -->
+                <form id="login-form" class="space-y-5" novalidate>
+                    <!-- Identifier -->
+                    <div>
+                        <label for="identifier" class="form-label">Email</label>
+                        <div class="relative flex items-center">
+                            <span
+                                class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+                            >
+                            </span>
+                            <input
+                                id="identifier"
+                                name="identifier"
+                                type="text"
+                                autocomplete="username"
+                                class="form-input pl-9"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    <!-- Password -->
+                    <div>
+                        <label for="password" class="form-label"
+                            >Contraseña</label
+                        >
+                        <div class="relative flex items-center">
+                            <span
+                                class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+                            >
+                            </span>
+                            <input
+                                id="password"
+                                name="password"
+                                type="password"
+                                autocomplete="current-password"
+                                class="form-input pl-9 pr-10"
+                                required
+                            />
+                            <button
+                                type="button"
+                                id="toggle-password"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                            >
+                                <svg
+                                    id="eye-open"
+                                    width="15"
+                                    height="15"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
+                                    ></path><circle cx="12" cy="12" r="3"
+                                    ></circle>
+                                </svg>
+                                <svg
+                                    id="eye-closed"
+                                    width="15"
+                                    height="15"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    viewBox="0 0 24 24"
+                                    class="hidden"
+                                >
+                                    <path
+                                        d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
+                                    ></path><line x1="1" y1="1" x2="23" y2="23"
+                                    ></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Error message -->
+                    <div
+                        id="login-error"
+                        class="hidden rounded-lg px-4 py-3 text-sm text-red-400 bg-red-400/10 border border-red-400/25 flex items-center gap-2"
+                    >
+                        <svg
+                            width="14"
+                            height="14"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.5"
+                            viewBox="0 0 24 24"
+                            class="shrink-0"
+                        >
+                            <circle cx="12" cy="12" r="10"></circle><line
+                                x1="15"
+                                y1="9"
+                                x2="9"
+                                y2="15"></line><line
+                                x1="9"
+                                y1="9"
+                                x2="15"
+                                y2="15"></line>
+                        </svg>
+                        <span id="login-error-msg">Credenciales inválidas</span>
+                    </div>
+
+                    <!-- Submit -->
+                    <button
+                        id="submit-btn"
+                        type="submit"
+                        class="btn-primary w-full py-3 text-base mt-2"
+                    >
+                        <span id="btn-text">Iniciar Sesión</span>
+                        <svg
+                            id="btn-spinner"
+                            class="hidden animate-spin"
+                            width="16"
+                            height="16"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                        >
+                            <circle
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="rgba(255,255,255,0.3)"
+                                stroke-width="3"></circle>
+                            <path
+                                d="M12 2a10 10 0 0 1 10 10"
+                                stroke="white"
+                                stroke-width="3"
+                                stroke-linecap="round"></path>
+                        </svg>
+                    </button>
+                </form>
+
+
+            </div>
+
+            <!-- Footer note -->
+            <p class="text-center text-xs text-slate-700 mt-4">
+                Acceso restringido
+            </p>
+        </div>
+
+        <!-- Toast container -->
+        <div class="toast-container"></div>
+
+        <script>
+            import {
+                authLogin,
+                getAccessToken,
+                showToast,
+            } from "../utils/api.ts";
+
+            // Redirect if already logged in
+            if (getAccessToken()) {
+                window.location.href = "/";
+            }
+
+            // Toggle password visibility
+            const pwdInput = document.getElementById(
+                "password",
+            ) as HTMLInputElement | null;
+            const eyeOpen = document.getElementById("eye-open");
+            const eyeClosed = document.getElementById("eye-closed");
+            document
+                .getElementById("toggle-password")
+                ?.addEventListener("click", () => {
+                    if (!pwdInput) return;
+                    const show = pwdInput.type === "password";
+                    pwdInput.type = show ? "text" : "password";
+                    eyeOpen?.classList.toggle("hidden", show);
+                    eyeClosed?.classList.toggle("hidden", !show);
+                });
+
+            // Login form
+            const form = document.getElementById(
+                "login-form",
+            ) as HTMLFormElement | null;
+            const submitBtn = document.getElementById(
+                "submit-btn",
+            ) as HTMLButtonElement | null;
+            const btnText = document.getElementById("btn-text");
+            const btnSpinner = document.getElementById("btn-spinner");
+            const errorBox = document.getElementById("login-error");
+            const errorMsg = document.getElementById("login-error-msg");
+
+            const setLoading = (loading: boolean) => {
+                if (!submitBtn || !btnText || !btnSpinner) return;
+                submitBtn.disabled = loading;
+                btnText.classList.toggle("hidden", loading);
+                btnSpinner.classList.toggle("hidden", !loading);
+            };
+
+            const showError = (msg: string) => {
+                if (errorBox && errorMsg) {
+                    errorMsg.textContent = msg;
+                    errorBox.classList.remove("hidden");
+                }
+            };
+
+            form?.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                errorBox?.classList.add("hidden");
+
+                const identifier = (
+                    document.getElementById("identifier") as HTMLInputElement
+                )?.value.trim();
+                const password = (
+                    document.getElementById("password") as HTMLInputElement
+                )?.value;
+
+                if (!identifier || !password) {
+                    showError("Por favor completa todos los campos.");
+                    return;
+                }
+
+                setLoading(true);
+                try {
+                    const user = await authLogin(identifier, password);
+
+                    if (user.role !== "admin") {
+                        showError(
+                            "Acceso denegado. Se requieren privilegios de administrador.",
+                        );
+                        setLoading(false);
+                        return;
+                    }
+
+                    // Persist email for display in sidebar
+                    const emailOrPhone = user.email ?? user.phone ?? identifier;
+                    localStorage.setItem("vz_user_email", emailOrPhone);
+
+                    showToast("¡Bienvenido de vuelta!", "success");
+                    setTimeout(() => {
+                        window.location.href = "/";
+                    }, 600);
+                } catch (err: unknown) {
+                    const message =
+                        err instanceof Error
+                            ? err.message
+                            : "Error al iniciar sesión";
+                    showError(message);
+                    setLoading(false);
+                }
+            });
+        </script>
+    </body>
+</html>

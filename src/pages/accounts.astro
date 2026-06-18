@@ -1,0 +1,308 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Cuentas" activeNav="accounts">
+  <div class="space-y-5">
+
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <h2 class="text-xl font-bold text-white">Gestión de Cuentas</h2>
+        <p class="text-sm text-slate-500 mt-0.5">Administra credenciales, roles y accesos al sistema</p>
+      </div>
+      <button id="btn-new-account" class="btn-primary">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        Nueva Cuenta
+      </button>
+    </div>
+
+    <div class="glass-card rounded-xl overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="cms-table">
+          <thead><tr>
+            <th>Identificador</th><th>Rol</th><th>ID Auth</th><th class="text-right">Acciones</th>
+          </tr></thead>
+          <tbody id="accounts-body">
+            <tr><td colspan="4" class="text-center py-10 text-slate-500">Cargando cuentas...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create account dialog -->
+  <dialog id="create-account-dialog">
+    <div class="modal-box max-w-md">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="text-base font-semibold text-white">Nueva Cuenta</h3>
+        <button id="close-create-account" class="btn-icon btn-icon-red">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form id="create-account-form" class="space-y-4" novalidate>
+        <div>
+          <label class="form-label">Email o Teléfono <span class="text-red-400">*</span></label>
+          <input id="c-identifier" type="text" class="form-input" placeholder="ejemplo@ecommerce.mx" required />
+        </div>
+        <div>
+          <label class="form-label">Contraseña <span class="text-red-400">*</span></label>
+          <input id="c-password" type="password" class="form-input" placeholder="mínimo 6 caracteres" required />
+        </div>
+        <div>
+          <label class="form-label">Rol <span class="text-red-400">*</span></label>
+          <select id="c-role" class="form-input" required>
+            <option value="customer">Operador (Cliente/Staff)</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </div>
+        <div id="create-account-error" class="hidden rounded-lg px-4 py-3 text-sm text-red-400 bg-red-400/10 border border-red-400/25"></div>
+        <div class="flex gap-3 justify-end pt-1">
+          <button type="button" id="cancel-create-account" class="btn-secondary">Cancelar</button>
+          <button type="submit" id="submit-create-account" class="btn-primary">Crear Cuenta</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- Edit credentials dialog -->
+  <dialog id="edit-account-dialog">
+    <div class="modal-box max-w-md">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="text-base font-semibold text-white">Editar Credenciales</h3>
+        <button id="close-edit-account" class="btn-icon btn-icon-red">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form id="edit-account-form" class="space-y-4" novalidate>
+        <input type="hidden" id="account-id" />
+        <div>
+          <label class="form-label">Nuevo Email (opcional)</label>
+          <input id="a-email" type="email" class="form-input" placeholder="nuevo@ecommerce.mx" />
+        </div>
+        <div>
+          <label class="form-label">Nuevo Teléfono (opcional)</label>
+          <input id="a-phone" type="tel" class="form-input" placeholder="5512345678" />
+        </div>
+        <div>
+          <label class="form-label">Nueva Contraseña (opcional)</label>
+          <div class="relative">
+            <input id="a-password" type="password" class="form-input pr-10" placeholder="mínimo 6 caracteres" />
+            <button type="button" id="toggle-a-password" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div id="account-form-error" class="hidden rounded-lg px-4 py-3 text-sm text-red-400 bg-red-400/10 border border-red-400/25"></div>
+        <p class="text-xs text-slate-600">Solo envía los campos que deseas modificar. Los campos vacíos no se actualizarán.</p>
+        <div class="flex gap-3 justify-end pt-1">
+          <button type="button" id="cancel-edit-account" class="btn-secondary">Cancelar</button>
+          <button type="submit" id="submit-account" class="btn-primary">Guardar Cambios</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- Delete account dialog -->
+  <dialog id="delete-account-dialog">
+    <div class="modal-box max-w-sm text-center">
+      <div class="w-14 h-14 rounded-full bg-red-500/15 border border-red-500/25 flex items-center justify-center mx-auto mb-4">
+        <svg width="24" height="24" fill="none" stroke="#f87171" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <h3 class="text-base font-semibold text-white mb-2">Desactivar Cuenta</h3>
+      <p class="text-sm text-slate-400 mb-2">Esta acción desactivará la cuenta (Soft Delete).</p>
+      <input type="hidden" id="delete-account-id" />
+      <div class="flex gap-3 justify-center mt-6">
+        <button id="cancel-delete-account" class="btn-secondary">Cancelar</button>
+        <button id="confirm-delete-account" class="btn-danger py-2.5 px-5">Desactivar</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script>
+    import { api, showToast } from '../utils/api.ts';
+
+    interface Account {
+      id: string; email?: string; phone?: string; role: string;
+    }
+
+    async function loadAccounts() {
+      const tbody = document.getElementById('accounts-body')!;
+      try {
+        const res = await api.get<Account[]>('/auth');
+        const accounts = res.data as Account[];
+        if (accounts.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-slate-500">No hay cuentas registradas.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = accounts.map(a => {
+          const identifier = a.email ?? a.phone ?? '—';
+          const isAdmin = a.role === 'admin';
+          return `
+            <tr>
+              <td>
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-full ${isAdmin ? 'bg-gradient-brand' : 'bg-slate-700'} flex items-center justify-center text-xs font-bold text-white shrink-0">
+                    ${identifier.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p class="font-medium text-white text-sm">${identifier}</p>
+                    ${a.email && a.phone ? `<p class="text-xs text-slate-500">${a.phone}</p>` : ''}
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="text-xs px-2.5 py-0.5 rounded-full font-semibold ${isAdmin ? 'badge-delivered' : 'badge-confirmed'}">
+                  ${isAdmin ? '🔑 Admin' : '👤 Cliente'}
+                </span>
+              </td>
+              <td class="font-mono text-xs text-slate-600">${a.id.slice(0,12)}…</td>
+              <td>
+                <div class="flex gap-1.5 justify-end">
+                  <button class="btn-icon btn-icon-teal edit-account-btn" data-id="${a.id}" title="Editar credenciales">
+                    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
+                  <button class="btn-icon btn-icon-red delete-account-btn" data-id="${a.id}" title="Eliminar cuenta">
+                    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        document.querySelectorAll('.edit-account-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const el = btn as HTMLElement;
+            (document.getElementById('account-id') as HTMLInputElement).value = el.dataset.id!;
+            (document.getElementById('edit-account-form') as HTMLFormElement).reset();
+            (document.getElementById('account-form-error')!).classList.add('hidden');
+            (document.getElementById('edit-account-dialog') as HTMLDialogElement).showModal();
+          });
+        });
+        document.querySelectorAll('.delete-account-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            (document.getElementById('delete-account-id') as HTMLInputElement).value = (btn as HTMLElement).dataset.id!;
+            (document.getElementById('delete-account-dialog') as HTMLDialogElement).showModal();
+          });
+        });
+      } catch (err: unknown) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center py-10 text-red-400 text-sm">${err instanceof Error ? err.message : 'Error'}</td></tr>`;
+      }
+    }
+
+    document.addEventListener('astro:page-load', () => {
+      if (window.location.pathname !== '/accounts') return;
+      if (localStorage.getItem('vz_user_role') !== 'admin') {
+        window.location.href = '/';
+        return;
+      }
+      loadAccounts();
+
+      // Create dialog
+      const closeCreateDialog = () => (document.getElementById('create-account-dialog') as HTMLDialogElement).close();
+      document.getElementById('btn-new-account')?.addEventListener('click', () => {
+        (document.getElementById('create-account-form') as HTMLFormElement).reset();
+        (document.getElementById('create-account-error')!).classList.add('hidden');
+        (document.getElementById('create-account-dialog') as HTMLDialogElement).showModal();
+      });
+      document.getElementById('close-create-account')?.addEventListener('click', closeCreateDialog);
+      document.getElementById('cancel-create-account')?.addEventListener('click', closeCreateDialog);
+      document.getElementById('create-account-dialog')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeCreateDialog(); });
+
+      document.getElementById('create-account-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errBox = document.getElementById('create-account-error')!;
+        errBox.classList.add('hidden');
+        
+        const identifier = (document.getElementById('c-identifier') as HTMLInputElement).value.trim();
+        const password = (document.getElementById('c-password') as HTMLInputElement).value;
+        const role = (document.getElementById('c-role') as HTMLSelectElement).value;
+
+        if (!identifier || !password) {
+          errBox.textContent = 'Identificador y contraseña son requeridos.';
+          errBox.classList.remove('hidden');
+          return;
+        }
+
+        const isEmail = identifier.includes('@');
+        const body = isEmail ? { email: identifier, password, role } : { phone: identifier, password, role };
+
+        const btn = document.getElementById('submit-create-account') as HTMLButtonElement;
+        btn.disabled = true;
+        try {
+          await api.post('/auth/register', body);
+          showToast('Cuenta creada', 'success');
+          closeCreateDialog();
+          loadAccounts();
+        } catch (err: unknown) {
+          errBox.textContent = err instanceof Error ? err.message : 'Error';
+          errBox.classList.remove('hidden');
+        } finally { btn.disabled = false; }
+      });
+
+      // Toggle password
+      document.getElementById('toggle-a-password')?.addEventListener('click', () => {
+        const input = document.getElementById('a-password') as HTMLInputElement;
+        input.type = input.type === 'password' ? 'text' : 'password';
+      });
+
+      // Edit dialog
+      const closeEditDialog = () => (document.getElementById('edit-account-dialog') as HTMLDialogElement).close();
+      document.getElementById('close-edit-account')?.addEventListener('click', closeEditDialog);
+      document.getElementById('cancel-edit-account')?.addEventListener('click', closeEditDialog);
+      document.getElementById('edit-account-dialog')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeEditDialog(); });
+
+      document.getElementById('edit-account-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errBox = document.getElementById('account-form-error')!;
+        errBox.classList.add('hidden');
+        const id = (document.getElementById('account-id') as HTMLInputElement).value;
+        const email = (document.getElementById('a-email') as HTMLInputElement).value.trim();
+        const phone = (document.getElementById('a-phone') as HTMLInputElement).value.trim();
+        const password = (document.getElementById('a-password') as HTMLInputElement).value;
+
+        const body: Record<string, string> = {};
+        if (email) body.email = email;
+        if (phone) body.phone = phone;
+        if (password) body.password = password;
+
+        if (Object.keys(body).length === 0) {
+          errBox.textContent = 'Debes modificar al menos un campo.';
+          errBox.classList.remove('hidden');
+          return;
+        }
+
+        const btn = document.getElementById('submit-account') as HTMLButtonElement;
+        btn.disabled = true;
+        try {
+          await api.put(`/auth/${id}`, body);
+          showToast('Credenciales actualizadas', 'success');
+          closeEditDialog();
+          loadAccounts();
+        } catch (err: unknown) {
+          errBox.textContent = err instanceof Error ? err.message : 'Error';
+          errBox.classList.remove('hidden');
+        } finally { btn.disabled = false; }
+      });
+
+      // Delete dialog
+      const closeDeleteDialog = () => (document.getElementById('delete-account-dialog') as HTMLDialogElement).close();
+      document.getElementById('cancel-delete-account')?.addEventListener('click', closeDeleteDialog);
+      document.getElementById('delete-account-dialog')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeDeleteDialog(); });
+      document.getElementById('confirm-delete-account')?.addEventListener('click', async () => {
+        const id = (document.getElementById('delete-account-id') as HTMLInputElement).value;
+        try {
+          await api.delete(`/auth/${id}`);
+          showToast('Cuenta desactivada', 'success');
+          closeDeleteDialog();
+          loadAccounts();
+        } catch (err: unknown) { showToast(err instanceof Error ? err.message : 'Error al eliminar', 'error'); }
+      });
+    });
+  </script>
+</Layout>

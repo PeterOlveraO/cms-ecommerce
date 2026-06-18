@@ -1,0 +1,210 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Métodos de Pago" activeNav="payment-methods">
+  <div class="space-y-5">
+
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <h2 class="text-xl font-bold text-white">Métodos de Pago</h2>
+        <p class="text-sm text-slate-500 mt-0.5">Configura las cuentas bancarias para transferencias SPEI</p>
+      </div>
+      <button id="btn-new-pm" class="btn-primary">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        Nueva Cuenta
+      </button>
+    </div>
+
+    <div id="pm-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div class="col-span-full text-center py-10 text-slate-500 text-sm">Cargando métodos de pago...</div>
+    </div>
+  </div>
+
+  <dialog id="pm-dialog">
+    <div class="modal-box max-w-md">
+      <div class="flex items-center justify-between mb-5">
+        <h3 id="pm-dialog-title" class="text-base font-semibold text-white">Nueva Cuenta Bancaria</h3>
+        <button id="close-pm-dialog" class="btn-icon btn-icon-red">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form id="pm-form" class="space-y-4" novalidate>
+        <input type="hidden" id="pm-id" />
+        <div>
+          <label class="form-label">Método / Tipo <span class="text-red-400">*</span></label>
+          <input id="pm-method" type="text" class="form-input" placeholder="Transferencia SPEI" required />
+        </div>
+        <div>
+          <label class="form-label">Banco <span class="text-red-400">*</span></label>
+          <input id="pm-bank" type="text" class="form-input" placeholder="BBVA, Santander, Banamex…" required />
+        </div>
+        <div>
+          <label class="form-label">Número de Cuenta / CLABE <span class="text-red-400">*</span></label>
+          <input id="pm-account" type="text" class="form-input font-mono" placeholder="012345678901234567" required />
+        </div>
+        <div>
+          <label class="form-label">Titular de la Cuenta <span class="text-red-400">*</span></label>
+          <input id="pm-holder" type="text" class="form-input" placeholder="Ecommerce S.A. de C.V." required />
+        </div>
+        <div id="pm-form-error" class="hidden rounded-lg px-4 py-3 text-sm text-red-400 bg-red-400/10 border border-red-400/25"></div>
+        <div class="flex gap-3 justify-end pt-1">
+          <button type="button" id="cancel-pm-dialog" class="btn-secondary">Cancelar</button>
+          <button type="submit" id="submit-pm" class="btn-primary"><span id="pm-submit-text">Agregar Cuenta</span></button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog id="delete-pm-dialog">
+    <div class="modal-box max-w-sm text-center">
+      <div class="w-14 h-14 rounded-full bg-red-500/15 border border-red-500/25 flex items-center justify-center mx-auto mb-4">
+        <svg width="24" height="24" fill="none" stroke="#f87171" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+      </div>
+      <h3 class="text-base font-semibold text-white mb-2">Eliminar Método de Pago</h3>
+      <p class="text-sm text-slate-400 mb-6">Esta cuenta bancaria será eliminada del sistema.</p>
+      <input type="hidden" id="delete-pm-id" />
+      <div class="flex gap-3 justify-center">
+        <button id="cancel-delete-pm" class="btn-secondary">Cancelar</button>
+        <button id="confirm-delete-pm" class="btn-danger py-2.5 px-5">Eliminar</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script>
+    import { api, showToast } from '../utils/api.ts';
+
+    interface PaymentMethod {
+      id: string; method: string; bank: string;
+      account_number: string; account_holder: string;
+    }
+
+    const BANK_COLORS: Record<string, string> = {
+      bbva: '#1464A0', santander: '#EC0000', banamex: '#00529F',
+      hsbc: '#DB0011', banorte: '#E30B15', scotiabank: '#EC1C24',
+    };
+
+    function getBankColor(bank: string): string {
+      const key = bank.toLowerCase();
+      for (const b in BANK_COLORS) {
+        if (key.includes(b)) return BANK_COLORS[b];
+      }
+      return '#0d9488';
+    }
+
+    async function loadPaymentMethods() {
+      const grid = document.getElementById('pm-grid')!;
+      try {
+        const res = await api.get<PaymentMethod[]>('/payment-methods');
+        const pms = res.data as PaymentMethod[];
+        if (pms.length === 0) {
+          grid.innerHTML = '<div class="col-span-full text-center py-10 text-slate-500 text-sm">No hay métodos de pago configurados.</div>';
+          return;
+        }
+        grid.innerHTML = pms.map(pm => `
+          <div class="glass-card-hover rounded-xl p-5">
+            <div class="flex items-start justify-between mb-4">
+              <div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style="background:${getBankColor(pm.bank)}20;border:1px solid ${getBankColor(pm.bank)}40">
+                <svg width="18" height="18" fill="none" stroke="${getBankColor(pm.bank)}" stroke-width="2" viewBox="0 0 24 24">
+                  <rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>
+                </svg>
+              </div>
+              <div class="flex gap-1.5">
+                <button class="btn-icon btn-icon-teal edit-pm-btn"
+                  data-id="${pm.id}" data-method="${pm.method}"
+                  data-bank="${pm.bank}" data-account="${pm.account_number}"
+                  data-holder="${pm.account_holder}">
+                  <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <button class="btn-icon btn-icon-red delete-pm-btn" data-id="${pm.id}">
+                  <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                </button>
+              </div>
+            </div>
+            <p class="text-xs text-slate-500 mb-0.5">${pm.method}</p>
+            <p class="font-bold text-white text-base mb-1">${pm.bank}</p>
+            <p class="font-mono text-sm text-teal-400 mb-1">${pm.account_number}</p>
+            <p class="text-xs text-slate-400">${pm.account_holder}</p>
+          </div>
+        `).join('');
+
+        document.querySelectorAll('.edit-pm-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const el = btn as HTMLElement;
+            (document.getElementById('pm-dialog-title')!).textContent = 'Editar Cuenta Bancaria';
+            (document.getElementById('pm-submit-text')!).textContent = 'Guardar Cambios';
+            (document.getElementById('pm-id') as HTMLInputElement).value = el.dataset.id!;
+            (document.getElementById('pm-method') as HTMLInputElement).value = el.dataset.method!;
+            (document.getElementById('pm-bank') as HTMLInputElement).value = el.dataset.bank!;
+            (document.getElementById('pm-account') as HTMLInputElement).value = el.dataset.account!;
+            (document.getElementById('pm-holder') as HTMLInputElement).value = el.dataset.holder!;
+            (document.getElementById('pm-form-error')!).classList.add('hidden');
+            (document.getElementById('pm-dialog') as HTMLDialogElement).showModal();
+          });
+        });
+        document.querySelectorAll('.delete-pm-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            (document.getElementById('delete-pm-id') as HTMLInputElement).value = (btn as HTMLElement).dataset.id!;
+            (document.getElementById('delete-pm-dialog') as HTMLDialogElement).showModal();
+          });
+        });
+      } catch (err: unknown) {
+        grid.innerHTML = `<div class="col-span-full text-center py-10 text-red-400 text-sm">${err instanceof Error ? err.message : 'Error'}</div>`;
+      }
+    }
+
+    document.addEventListener('astro:page-load', () => {
+      if (window.location.pathname !== '/payment-methods') return;
+      loadPaymentMethods();
+
+      document.getElementById('btn-new-pm')?.addEventListener('click', () => {
+        (document.getElementById('pm-dialog-title')!).textContent = 'Nueva Cuenta Bancaria';
+        (document.getElementById('pm-submit-text')!).textContent = 'Agregar Cuenta';
+        (document.getElementById('pm-id') as HTMLInputElement).value = '';
+        (document.getElementById('pm-form') as HTMLFormElement).reset();
+        (document.getElementById('pm-form-error')!).classList.add('hidden');
+        (document.getElementById('pm-dialog') as HTMLDialogElement).showModal();
+      });
+
+      const closePmDialog = () => (document.getElementById('pm-dialog') as HTMLDialogElement).close();
+      document.getElementById('close-pm-dialog')?.addEventListener('click', closePmDialog);
+      document.getElementById('cancel-pm-dialog')?.addEventListener('click', closePmDialog);
+      document.getElementById('pm-dialog')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closePmDialog(); });
+
+      document.getElementById('pm-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errBox = document.getElementById('pm-form-error')!;
+        errBox.classList.add('hidden');
+        const id = (document.getElementById('pm-id') as HTMLInputElement).value;
+        const method = (document.getElementById('pm-method') as HTMLInputElement).value.trim();
+        const bank = (document.getElementById('pm-bank') as HTMLInputElement).value.trim();
+        const account_number = (document.getElementById('pm-account') as HTMLInputElement).value.trim();
+        const account_holder = (document.getElementById('pm-holder') as HTMLInputElement).value.trim();
+        const btn = document.getElementById('submit-pm') as HTMLButtonElement;
+        btn.disabled = true;
+        try {
+          const body = { method, bank, account_number, account_holder };
+          if (id) { await api.put(`/payment-methods/${id}`, body); showToast('Cuenta actualizada', 'success'); }
+          else { await api.post('/payment-methods', body); showToast('Cuenta agregada', 'success'); }
+          closePmDialog();
+          loadPaymentMethods();
+        } catch (err: unknown) {
+          errBox.textContent = err instanceof Error ? err.message : 'Error';
+          errBox.classList.remove('hidden');
+        } finally { btn.disabled = false; }
+      });
+
+      document.getElementById('cancel-delete-pm')?.addEventListener('click', () => (document.getElementById('delete-pm-dialog') as HTMLDialogElement).close());
+      document.getElementById('delete-pm-dialog')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) (document.getElementById('delete-pm-dialog') as HTMLDialogElement).close(); });
+      document.getElementById('confirm-delete-pm')?.addEventListener('click', async () => {
+        const id = (document.getElementById('delete-pm-id') as HTMLInputElement).value;
+        try {
+          await api.delete(`/payment-methods/${id}`);
+          showToast('Cuenta eliminada', 'success');
+          (document.getElementById('delete-pm-dialog') as HTMLDialogElement).close();
+          loadPaymentMethods();
+        } catch (err: unknown) { showToast(err instanceof Error ? err.message : 'Error', 'error'); }
+      });
+    });
+  </script>
+</Layout>

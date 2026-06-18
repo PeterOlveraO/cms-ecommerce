@@ -1,0 +1,350 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Pedidos" activeNav="orders">
+  <div class="space-y-5">
+
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <h2 class="text-xl font-bold text-white">Gestión de Pedidos</h2>
+        <p class="text-sm text-slate-500 mt-0.5">Revisa y actualiza el estado de los pedidos</p>
+      </div>
+    </div>
+
+    <!-- Status filter tabs -->
+    <div class="flex gap-2 flex-wrap" id="status-tabs">
+      {['', 'pending', 'confirmed', 'shipped', 'delivered', 'cancelled'].map(s => (
+        <button
+          class={`status-tab text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${s === '' ? 'active-tab' : ''}`}
+          data-status={s}
+        >
+          {s === '' ? 'Todos' : s === 'pending' ? 'Pendiente' : s === 'confirmed' ? 'Confirmado' : s === 'shipped' ? 'Enviado' : s === 'delivered' ? 'Entregado' : 'Cancelado'}
+        </button>
+      ))}
+    </div>
+
+    <div class="glass-card rounded-xl overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="cms-table">
+          <thead><tr>
+            <th>ID</th><th>Cliente</th><th>Total</th><th>Envío</th><th>Estado</th><th>Fecha</th><th class="text-right">Acciones</th>
+          </tr></thead>
+          <tbody id="orders-body">
+            <tr><td colspan="7" class="text-center py-10 text-slate-500">Cargando pedidos...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Order detail dialog -->
+  <dialog id="order-dialog">
+    <div class="modal-box max-w-2xl">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="text-base font-semibold text-white">Detalle del Pedido</h3>
+        <button id="close-order-dialog" class="btn-icon btn-icon-red">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div id="order-detail-content" class="space-y-5">
+        <p class="text-slate-500 text-sm">Cargando...</p>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Status update dialog -->
+  <dialog id="status-dialog">
+    <div class="modal-box max-w-sm">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="text-base font-semibold text-white">Actualizar Estado</h3>
+        <button id="close-status-dialog" class="btn-icon btn-icon-red">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="space-y-4">
+        <input type="hidden" id="status-order-id" />
+        <div>
+          <label class="form-label">Nuevo Estado</label>
+          <select id="new-status" class="form-input">
+            <option value="pending">Pendiente</option>
+            <option value="confirmed">Confirmado</option>
+            <option value="shipped">Enviado</option>
+            <option value="delivered">Entregado</option>
+            <option value="cancelled">Cancelado</option>
+          </select>
+        </div>
+        <div id="cancel-warning" class="hidden rounded-lg px-4 py-3 text-sm text-yellow-400 bg-yellow-400/10 border border-yellow-400/25">
+          ⚠️ Al cancelar un pedido el stock de los productos se restaurará automáticamente.
+        </div>
+        <div class="flex gap-3 justify-end">
+          <button id="cancel-status-dialog" class="btn-secondary">Cancelar</button>
+          <button id="confirm-status-update" class="btn-primary">Confirmar</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Shipping update dialog -->
+  <dialog id="shipping-dialog">
+    <div class="modal-box max-w-sm">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="text-base font-semibold text-white">Editar Costo de Envío</h3>
+        <button id="close-shipping-dialog" class="btn-icon btn-icon-red">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="space-y-4">
+        <input type="hidden" id="shipping-order-id" />
+        <div>
+          <label class="form-label">Nuevo Costo de Envío (MXN)</label>
+          <input id="new-shipping-cost" type="number" min="0" step="0.01" class="form-input" placeholder="0.00" />
+        </div>
+        <div class="flex gap-3 justify-end mt-4">
+          <button id="cancel-shipping-dialog" class="btn-secondary">Cancelar</button>
+          <button id="confirm-shipping-update" class="btn-primary">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <script>
+    import { api, showToast } from '../utils/api.ts';
+
+    interface OrderItem { product_id: string; product_name?: string; quantity: number; unit_price: number; }
+    interface Order {
+      id: string; customer_id: string;
+      customer_first_name?: string;
+      customer_last_name?: string; status: string;
+      total: number; shipping_cost?: number; notes?: string;
+      created_at: string; items?: OrderItem[];
+    }
+    interface Customer {
+      id: string; first_name: string; last_name: string;
+      street_address: string; exterior_number: string; interior_number: string | null;
+      postal_code: string; city: string; state: string; country: string; phone: string;
+    }
+
+    const STATUS_LABELS: Record<string, string> = {
+      pending: 'Pendiente', confirmed: 'Confirmado',
+      shipped: 'Enviado', delivered: 'Entregado', cancelled: 'Cancelado',
+    };
+    const STATUS_BADGE: Record<string, string> = {
+      pending: 'badge-pending', confirmed: 'badge-confirmed',
+      shipped: 'badge-shipped', delivered: 'badge-delivered', cancelled: 'badge-cancelled',
+    };
+
+    let filterStatus = '';
+
+    // Style active tab
+    function setActiveTab(status: string) {
+      document.querySelectorAll('.status-tab').forEach(tab => {
+        const el = tab as HTMLElement;
+        const isActive = el.dataset.status === status;
+        el.className = `status-tab text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
+          isActive ? 'bg-teal-500/15 border-teal-500/30 text-teal-300' : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-600'
+        }`;
+      });
+    }
+
+    async function loadOrders() {
+      const tbody = document.getElementById('orders-body')!;
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center py-10 text-slate-500">Cargando pedidos...</td></tr>`;
+      try {
+        const res = await api.get<Order[]>('/orders');
+        let orders = res.data as Order[];
+        if (filterStatus) orders = orders.filter(o => o.status === filterStatus);
+
+        if (orders.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" class="text-center py-10 text-slate-500">No hay pedidos con ese filtro.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = orders.map(o => `
+          <tr>
+            <td class="font-mono text-xs text-slate-400">${o.id.slice(0,8)}…</td>
+            <td class="font-medium text-slate-300">${o.customer_first_name ? `${o.customer_first_name} ${o.customer_last_name || ''}` : o.customer_id.slice(0,8)+'...'}</td>
+            <td class="font-semibold text-white">$${Number(o.total).toLocaleString('es-MX',{minimumFractionDigits:2})}</td>
+            <td class="text-slate-400">$${Number(o.shipping_cost ?? 0).toLocaleString('es-MX',{minimumFractionDigits:2})}</td>
+            <td><span class="text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[o.status] ?? ''}">${STATUS_LABELS[o.status] ?? o.status}</span></td>
+            <td class="text-slate-400 text-xs">${new Date(o.created_at).toLocaleDateString('es-MX')}</td>
+            <td>
+              <div class="flex gap-1.5 justify-end">
+                <button class="btn-icon btn-icon-teal view-order-btn" data-id="${o.id}" title="Ver detalle">
+                  <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+                ${o.status !== 'cancelled' ? `
+                <button class="btn-icon btn-icon-teal change-status-btn" data-id="${o.id}" data-status="${o.status}" title="Cambiar estado" style="background:rgba(168,85,247,0.1);color:#c084fc;">
+                  <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9"/><path d="M3 12a9 9 0 0 0 9 9"/><polyline points="16 8 21 12 16 16"/></svg>
+                </button>` : ''}
+              </div>
+            </td>
+          </tr>
+        `).join('');
+
+        document.querySelectorAll('.view-order-btn').forEach(btn => {
+          btn.addEventListener('click', () => openOrderDetail((btn as HTMLElement).dataset.id!));
+        });
+        document.querySelectorAll('.change-status-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const el = btn as HTMLElement;
+            (document.getElementById('status-order-id') as HTMLInputElement).value = el.dataset.id!;
+            (document.getElementById('new-status') as HTMLSelectElement).value = el.dataset.status!;
+            (document.getElementById('cancel-warning')!).classList.add('hidden');
+            (document.getElementById('status-dialog') as HTMLDialogElement).showModal();
+          });
+        });
+      } catch (err: unknown) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-10 text-red-400 text-sm">${err instanceof Error ? err.message : 'Error'}</td></tr>`;
+      }
+    }
+
+    async function openOrderDetail(id: string) {
+      const content = document.getElementById('order-detail-content')!;
+      content.innerHTML = '<p class="text-slate-500 text-sm">Cargando...</p>';
+      (document.getElementById('order-dialog') as HTMLDialogElement).showModal();
+      try {
+        const res = await api.get<Order>(`/orders/${id}`);
+        const o = res.data as Order;
+        const customerRes = await api.get<Customer>(`/customers/${o.customer_id}`).catch(() => null);
+        const customer = customerRes ? (customerRes.data as Customer) : null;
+        const items: OrderItem[] = o.items ?? [];
+
+        const customerHtml = customer ? `
+          <div class="glass-card rounded-lg p-3 md:col-span-2 mt-3">
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">Datos de Envío y Cliente</p>
+            <div class="grid grid-cols-2 gap-x-4 gap-y-2">
+              <div><span class="text-xs text-slate-500 block">Cliente</span> <span class="text-sm text-slate-300">${customer.first_name} ${customer.last_name}</span></div>
+              <div><span class="text-xs text-slate-500 block">Teléfono</span> <span class="text-sm text-slate-300">${customer.phone}</span></div>
+              <div class="col-span-2"><span class="text-xs text-slate-500 block">Dirección</span> <span class="text-sm text-slate-300">${customer.street_address} #${customer.exterior_number} ${customer.interior_number ? 'Int. ' + customer.interior_number : ''}</span></div>
+              <div><span class="text-xs text-slate-500 block">Colonia / Ciudad</span> <span class="text-sm text-slate-300">${customer.city}</span></div>
+              <div><span class="text-xs text-slate-500 block">Estado / CP</span> <span class="text-sm text-slate-300">${customer.state}, ${customer.postal_code}</span></div>
+            </div>
+          </div>
+        ` : '';
+
+        content.innerHTML = `
+          <div class="grid grid-cols-2 gap-3">
+            <div class="glass-card rounded-lg p-3">
+              <p class="text-xs text-slate-500 mb-1">ID del Pedido</p>
+              <p class="font-mono text-xs text-slate-300">${o.id}</p>
+            </div>
+            <div class="glass-card rounded-lg p-3">
+              <p class="text-xs text-slate-500 mb-1">Estado</p>
+              <span class="text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[o.status] ?? ''}">${STATUS_LABELS[o.status] ?? o.status}</span>
+            </div>
+            <div class="glass-card rounded-lg p-3">
+              <p class="text-xs text-slate-500 mb-1">Total</p>
+              <p class="font-bold text-white">$${Number(o.total).toLocaleString('es-MX',{minimumFractionDigits:2})}</p>
+            </div>
+            <div class="glass-card rounded-lg p-3 flex justify-between items-center">
+              <div>
+                <p class="text-xs text-slate-500 mb-1">Costo de Envío</p>
+                <p class="text-slate-300">$${Number(o.shipping_cost ?? 0).toLocaleString('es-MX',{minimumFractionDigits:2})}</p>
+              </div>
+              <button class="btn-icon btn-icon-teal edit-shipping-btn" data-id="${o.id}" data-cost="${o.shipping_cost ?? 0}" title="Editar Envío">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+            </div>
+          </div>
+          ${customerHtml}
+          ${o.notes ? `<div class="glass-card rounded-lg p-3"><p class="text-xs text-slate-500 mb-1">Notas</p><p class="text-sm text-slate-300">${o.notes}</p></div>` : ''}
+          <div>
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">Productos del Pedido</p>
+            <div class="space-y-2">
+              ${items.length > 0
+                ? items.map((item: OrderItem) => `
+                    <div class="flex items-center justify-between py-2.5 px-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                      <div>
+                        <p class="text-sm font-medium text-white">${item.product_name ?? item.product_id.slice(0,12)+'…'}</p>
+                        <p class="text-xs text-slate-500">Cantidad: ${item.quantity}</p>
+                      </div>
+                      <p class="font-semibold text-white">$${Number(item.unit_price * item.quantity).toLocaleString('es-MX',{minimumFractionDigits:2})}</p>
+                    </div>
+                  `).join('')
+                : '<p class="text-sm text-slate-500 text-center py-4">Sin detalle de productos disponible.</p>'
+              }
+            </div>
+          </div>
+          <p class="text-xs text-slate-600 text-right">Pedido creado: ${new Date(o.created_at).toLocaleString('es-MX')}</p>
+        `;
+
+        document.querySelector('.edit-shipping-btn')?.addEventListener('click', (e) => {
+          const btn = e.currentTarget as HTMLElement;
+          (document.getElementById('shipping-order-id') as HTMLInputElement).value = btn.dataset.id!;
+          (document.getElementById('new-shipping-cost') as HTMLInputElement).value = btn.dataset.cost!;
+          (document.getElementById('shipping-dialog') as HTMLDialogElement).showModal();
+        });
+      } catch (err: unknown) {
+        content.innerHTML = `<p class="text-red-400 text-sm">${err instanceof Error ? err.message : 'Error'}</p>`;
+      }
+    }
+
+    document.addEventListener('astro:page-load', () => {
+      if (window.location.pathname !== '/orders') return;
+
+      setActiveTab('');
+      loadOrders();
+
+      // Status filter tabs
+      document.querySelectorAll('.status-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          filterStatus = (tab as HTMLElement).dataset.status ?? '';
+          setActiveTab(filterStatus);
+          loadOrders();
+        });
+      });
+
+      // Order dialog
+      document.getElementById('close-order-dialog')?.addEventListener('click', () => (document.getElementById('order-dialog') as HTMLDialogElement).close());
+      document.getElementById('order-dialog')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) (document.getElementById('order-dialog') as HTMLDialogElement).close(); });
+
+      // Status dialog
+      const closeStatusDialog = () => (document.getElementById('status-dialog') as HTMLDialogElement).close();
+      document.getElementById('close-status-dialog')?.addEventListener('click', closeStatusDialog);
+      document.getElementById('cancel-status-dialog')?.addEventListener('click', closeStatusDialog);
+      document.getElementById('status-dialog')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeStatusDialog(); });
+
+      const closeShippingDialog = () => (document.getElementById('shipping-dialog') as HTMLDialogElement).close();
+      document.getElementById('close-shipping-dialog')?.addEventListener('click', closeShippingDialog);
+      document.getElementById('cancel-shipping-dialog')?.addEventListener('click', closeShippingDialog);
+      document.getElementById('shipping-dialog')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeShippingDialog(); });
+
+      document.getElementById('confirm-shipping-update')?.addEventListener('click', async () => {
+        const id = (document.getElementById('shipping-order-id') as HTMLInputElement).value;
+        const shipping_cost = parseFloat((document.getElementById('new-shipping-cost') as HTMLInputElement).value);
+        if (isNaN(shipping_cost) || shipping_cost < 0) {
+          showToast('Costo inválido', 'error');
+          return;
+        }
+        try {
+          await api.put(`/orders/${id}/shipping`, { shipping_cost });
+          showToast('Costo de envío actualizado', 'success');
+          closeShippingDialog();
+          loadOrders();
+          openOrderDetail(id); // reload the detail view
+        } catch (err: unknown) {
+          showToast(err instanceof Error ? err.message : 'Error al actualizar', 'error');
+        }
+      });
+
+      document.getElementById('new-status')?.addEventListener('change', (e) => {
+        const warning = document.getElementById('cancel-warning')!;
+        warning.classList.toggle('hidden', (e.target as HTMLSelectElement).value !== 'cancelled');
+      });
+
+      document.getElementById('confirm-status-update')?.addEventListener('click', async () => {
+        const id = (document.getElementById('status-order-id') as HTMLInputElement).value;
+        const status = (document.getElementById('new-status') as HTMLSelectElement).value;
+        try {
+          await api.put(`/orders/${id}/status`, { status });
+          showToast(`Estado actualizado a "${STATUS_LABELS[status]}"`, 'success');
+          closeStatusDialog();
+          loadOrders();
+        } catch (err: unknown) {
+          showToast(err instanceof Error ? err.message : 'Error al actualizar estado', 'error');
+        }
+      });
+    });
+  </script>
+</Layout>
