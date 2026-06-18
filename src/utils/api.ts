@@ -6,11 +6,7 @@
 const DEFAULT_API_URL = 'http://localhost:3000';
 
 // ── Storage helpers ─────────────────────────────────────────
-export const getApiUrl = (): string =>
-  localStorage.getItem('vz_api_url') ?? DEFAULT_API_URL;
-
-export const setApiUrl = (url: string): void =>
-  localStorage.setItem('vz_api_url', url.replace(/\/$/, ''));
+export const getApiUrl = (): string => DEFAULT_API_URL;
 
 export const getAccessToken = (): string | null =>
   localStorage.getItem('vz_access_token');
@@ -101,7 +97,7 @@ async function apiFetch<T>(
 
       if (!newToken) {
         clearTokens();
-        window.location.href = '/login';
+        window.dispatchEvent(new CustomEvent('session:expired'));
         throw new Error('Session expired');
       }
 
@@ -114,7 +110,7 @@ async function apiFetch<T>(
 
       if (!newToken) {
         clearTokens();
-        window.location.href = '/login';
+        window.dispatchEvent(new CustomEvent('session:expired'));
         throw new Error('Session expired');
       }
 
@@ -153,6 +149,58 @@ export const api = {
 
   delete: <T>(path: string) =>
     apiFetch<T>(path, { method: 'DELETE' }),
+};
+
+// ── Image upload ─────────────────────────────────────────────
+/**
+ * Sube una imagen al endpoint POST /upload.
+ * Formatos permitidos por el backend: JPEG, PNG, WEBP, GIF (máx 5 MB).
+ * Devuelve la URL absoluta de la imagen almacenada en el servidor.
+ * Ej: "http://localhost:3000/uploads/ab3f9...1.jpg"
+ */
+export const uploadImage = async (file: File): Promise<string> => {
+
+  // Helper interno para construir y ejecutar el fetch de subida
+  const doFetch = (authToken: string | null): Promise<Response> => {
+    const fd = new FormData();
+    // ⚠️ El backend espera el campo con el nombre exacto "image"
+    fd.append('image', file);
+    // NO ponemos Content-Type manualmente: el navegador agrega el boundary correcto
+    const h: HeadersInit = authToken ? { Authorization: `Bearer ${authToken}` } : {};
+    return fetch(`${getApiUrl()}/upload`, { method: 'POST', headers: h, body: fd });
+  };
+
+  // Helper para parsear la respuesta de forma segura (la respuesta puede ser HTML en errores 5xx)
+  const parseResponse = async (res: Response): Promise<string> => {
+    let json: Record<string, unknown> | null = null;
+    try {
+      json = await res.json();
+    } catch {
+      // El servidor no devolvió JSON válido (p.ej. página HTML de error 5xx)
+      throw new Error(`Error del servidor (HTTP ${res.status}). Verifica que el backend esté activo.`);
+    }
+    if (!res.ok) {
+      throw new Error((json?.message as string) ?? `Error al subir imagen (HTTP ${res.status})`);
+    }
+    const relativePath = (json?.data as Record<string, string>)?.url ?? '';
+    if (!relativePath) throw new Error('El servidor no devolvió una URL de imagen válida.');
+    return relativePath.startsWith('http') ? relativePath : `${getApiUrl()}${relativePath}`;
+  };
+
+  let res = await doFetch(getAccessToken());
+
+  // Auto-refresh si el token expiró durante la subida
+  if (res.status === 401) {
+    const newToken = await tryRefresh();
+    if (!newToken) {
+      clearTokens();
+      window.dispatchEvent(new CustomEvent('session:expired'));
+      throw new Error('Session expired');
+    }
+    res = await doFetch(newToken);
+  }
+
+  return parseResponse(res);
 };
 
 // ── Auth helpers ─────────────────────────────────────────────

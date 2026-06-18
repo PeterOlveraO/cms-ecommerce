@@ -217,12 +217,47 @@ import Layout from "../layouts/Layout.astro";
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="form-label">URL de Imagen</label>
+                        <label class="form-label">Imagen del Producto</label>
+                        <!-- Hidden field that always holds the final URL -->
+                        <input type="hidden" id="f-image-url" />
+
+                        <!-- Preview card -->
+                        <div id="f-image-preview-wrap" class="hidden mb-2 relative">
+                            <img
+                                id="f-image-preview"
+                                src=""
+                                alt="Preview"
+                                class="w-full h-28 object-cover rounded-lg bg-slate-800 border border-teal-900/30"
+                            />
+                            <button
+                                type="button"
+                                id="f-image-clear"
+                                class="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/70 text-slate-300 hover:text-white flex items-center justify-center text-xs leading-none"
+                                title="Quitar imagen"
+                            >✕</button>
+                        </div>
+
+                        <!-- File picker -->
+                        <label
+                            id="f-image-file-label"
+                            class="flex items-center gap-2 cursor-pointer btn-secondary w-full text-xs py-2 mb-2"
+                        >
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            <span id="f-image-file-label-text">Seleccionar archivo…</span>
+                            <input
+                                id="f-image-file"
+                                type="file"
+                                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                class="sr-only"
+                            />
+                        </label>
+
+                        <!-- URL manual fallback -->
                         <input
-                            id="f-image-url"
+                            id="f-image-url-manual"
                             type="url"
-                            class="form-input"
-                            placeholder="https://example.com/producto.jpg"
+                            class="form-input text-xs"
+                            placeholder="O pega una URL externa…"
                         />
                     </div>
                     <div>
@@ -346,7 +381,7 @@ import Layout from "../layouts/Layout.astro";
     </dialog>
 
     <script>
-        import { api, showToast } from "../utils/api.ts";
+        import { api, uploadImage, showToast } from "../utils/api.ts";
 
         interface Category {
             id: string;
@@ -499,22 +534,18 @@ import Layout from "../layouts/Layout.astro";
             (
                 document.getElementById("submit-text") as HTMLElement
             ).textContent = "Crear Producto";
-            (document.getElementById("product-id") as HTMLInputElement).value =
-                "";
-            (
-                document.getElementById("product-form") as HTMLFormElement
-            ).reset();
-            (
-                document.getElementById("f-featured") as HTMLInputElement
-            ).checked = true;
+            (document.getElementById("product-id") as HTMLInputElement).value = "";
+            (document.getElementById("product-form") as HTMLFormElement).reset();
+            (document.getElementById("f-featured") as HTMLInputElement).checked = true;
+            // Reset image picker
+            (document.getElementById('f-image-url') as HTMLInputElement).value = '';
+            (document.getElementById('f-image-url-manual') as HTMLInputElement).value = '';
+            document.getElementById('f-image-preview-wrap')!.classList.add('hidden');
+            (document.getElementById('f-image-file-label-text')!).textContent = 'Seleccionar archivo…';
             renderCategoryCheckboxes([]);
             await renderAttributeCheckboxes({});
-            (
-                document.getElementById("form-error") as HTMLElement
-            ).classList.add("hidden");
-            (
-                document.getElementById("product-dialog") as HTMLDialogElement
-            ).showModal();
+            (document.getElementById("form-error") as HTMLElement).classList.add("hidden");
+            (document.getElementById("product-dialog") as HTMLDialogElement).showModal();
         }
 
         // ── Open edit dialog ───────────────────────────────────────
@@ -552,9 +583,20 @@ import Layout from "../layouts/Layout.astro";
                 ).value = p.sale_price ? String(p.sale_price) : "";
                 (document.getElementById("f-stock") as HTMLInputElement).value =
                     String(p.stock);
-                (
-                    document.getElementById("f-image-url") as HTMLInputElement
-                ).value = p.image_url;
+                // Populate image field and show preview for existing image
+                (document.getElementById('f-image-url') as HTMLInputElement).value = p.image_url ?? '';
+                (document.getElementById('f-image-url-manual') as HTMLInputElement).value = p.image_url ?? '';
+                const prevWrap = document.getElementById('f-image-preview-wrap')!;
+                const prevImg  = document.getElementById('f-image-preview') as HTMLImageElement;
+                const fileLabel = document.getElementById('f-image-file-label-text')!;
+                if (p.image_url) {
+                    prevImg.src = p.image_url;
+                    prevWrap.classList.remove('hidden');
+                    fileLabel.textContent = 'Cambiar archivo…';
+                } else {
+                    prevWrap.classList.add('hidden');
+                    fileLabel.textContent = 'Seleccionar archivo…';
+                }
                 (
                     document.getElementById(
                         "f-display-order",
@@ -743,7 +785,7 @@ import Layout from "../layouts/Layout.astro";
                 );
                 const imageUrl = (
                     document.getElementById("f-image-url") as HTMLInputElement
-                ).value.trim();
+                ).value.trim() || (document.getElementById('f-image-url-manual') as HTMLInputElement).value.trim();
                 const displayOrder = parseInt(
                     (
                         document.getElementById(
@@ -868,6 +910,62 @@ import Layout from "../layouts/Layout.astro";
             document
                 .getElementById("btn-new-product")
                 ?.addEventListener("click", openCreateDialog);
+
+            // ── Image picker wiring ────────────────────────────────
+            const fileInput   = document.getElementById('f-image-file') as HTMLInputElement;
+            const urlHidden   = document.getElementById('f-image-url') as HTMLInputElement;
+            const urlManual   = document.getElementById('f-image-url-manual') as HTMLInputElement;
+            const prevWrap    = document.getElementById('f-image-preview-wrap')!;
+            const prevImg     = document.getElementById('f-image-preview') as HTMLImageElement;
+            const clearBtn    = document.getElementById('f-image-clear')!;
+            const fileLabelTx = document.getElementById('f-image-file-label-text')!;
+
+            fileInput?.addEventListener('change', async () => {
+                const file = fileInput.files?.[0];
+                if (!file) return;
+
+                // Show loading state
+                fileLabelTx.textContent = 'Subiendo imagen…';
+                prevWrap.classList.add('hidden');
+                urlHidden.value = '';
+
+                try {
+                    const absoluteUrl = await uploadImage(file);
+                    urlHidden.value   = absoluteUrl;
+                    urlManual.value   = '';
+                    prevImg.src       = absoluteUrl;
+                    prevWrap.classList.remove('hidden');
+                    fileLabelTx.textContent = file.name.length > 22 ? file.name.slice(0, 20) + '…' : file.name;
+                    showToast('Imagen subida correctamente', 'success');
+                } catch (err: unknown) {
+                    fileInput.value = '';
+                    fileLabelTx.textContent = 'Seleccionar archivo…';
+                    showToast(err instanceof Error ? err.message : 'Error al subir imagen', 'error');
+                }
+            });
+
+            urlManual?.addEventListener('input', () => {
+                const val = urlManual.value.trim();
+                urlHidden.value = val;
+                if (val) {
+                    prevImg.src = val;
+                    prevWrap.classList.remove('hidden');
+                    fileLabelTx.textContent = 'Seleccionar archivo…';
+                    // clear file input
+                    fileInput.value = '';
+                } else {
+                    prevWrap.classList.add('hidden');
+                    urlHidden.value = '';
+                }
+            });
+
+            clearBtn?.addEventListener('click', () => {
+                urlHidden.value = '';
+                urlManual.value = '';
+                fileInput.value = '';
+                prevWrap.classList.add('hidden');
+                fileLabelTx.textContent = 'Seleccionar archivo…';
+            });
 
             const closeDialog = () =>
                 (
