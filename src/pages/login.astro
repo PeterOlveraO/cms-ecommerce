@@ -302,9 +302,10 @@ import "../styles/global.css";
                         return;
                     }
 
-                    // Persist email for display in sidebar
+                    // Persist email and role for display and auth checks
                     const emailOrPhone = user.email ?? user.phone ?? identifier;
                     localStorage.setItem("vz_user_email", emailOrPhone);
+                    localStorage.setItem("vz_user_role", user.role);
 
                     showToast("¡Bienvenido de vuelta!", "success");
                     setTimeout(() => {
