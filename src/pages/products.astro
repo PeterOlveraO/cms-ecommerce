@@ -32,20 +32,6 @@ import Layout from "../layouts/Layout.astro";
             class="glass-card rounded-xl px-5 py-4 flex flex-wrap gap-3 items-center"
         >
             <div class="relative flex-1 min-w-48">
-                <span
-                    class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
-                >
-                    <svg
-                        width="14"
-                        height="14"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        viewBox="0 0 24 24"
-                        ><circle cx="11" cy="11" r="8"></circle><path
-                            d="m21 21-4.35-4.35"></path></svg
-                    >
-                </span>
                 <input
                     id="search-input"
                     type="text"
@@ -466,7 +452,7 @@ import Layout from "../layouts/Layout.astro";
             if (categoryFilter) params.set("category_id", categoryFilter);
 
             try {
-                const res = await api.get<Product[]>(`/products/?${params}`);
+                const res = await api.get<Product[]>(`/products?${params}`);
                 const products = res.data as Product[];
                 const pagination = res.pagination as Pagination;
                 currentPage = pagination.page;
@@ -803,162 +789,173 @@ import Layout from "../layouts/Layout.astro";
         }
 
         // ── Form submit ────────────────────────────────────────────
-        document
-            .getElementById("product-form")
-            ?.addEventListener("submit", async (e) => {
-                e.preventDefault();
-                const errBox = document.getElementById("form-error")!;
-                errBox.classList.add("hidden");
-                const id = (
-                    document.getElementById("product-id") as HTMLInputElement
-                ).value;
-                const name = (
-                    document.getElementById("f-name") as HTMLInputElement
-                ).value.trim();
-                const brand = (
-                    document.getElementById("f-brand") as HTMLInputElement
-                ).value.trim();
-                const price = parseFloat(
-                    (document.getElementById("f-price") as HTMLInputElement)
-                        .value,
-                );
-                const salePrice = (
-                    document.getElementById("f-sale-price") as HTMLInputElement
-                ).value;
-                const stock = parseInt(
-                    (document.getElementById("f-stock") as HTMLInputElement)
-                        .value || "0",
-                );
-                const imageUrl =
-                    (
-                        document.getElementById(
-                            "f-image-url",
-                        ) as HTMLInputElement
-                    ).value.trim() ||
-                    (
-                        document.getElementById(
-                            "f-image-url-manual",
-                        ) as HTMLInputElement
-                    ).value.trim();
-                const displayOrder = parseInt(
-                    (
-                        document.getElementById(
-                            "f-display-order",
-                        ) as HTMLInputElement
-                    ).value || "1",
-                );
-                const description = (
-                    document.getElementById(
-                        "f-description",
-                    ) as HTMLTextAreaElement
-                ).value.trim();
-                const featured = !(
-                    document.getElementById("f-featured") as HTMLInputElement
-                ).checked;
-
-                const details: Record<string, string> = {};
-                document
-                    .querySelectorAll<HTMLInputElement>(
-                        'input[name="attr-value"]',
-                    )
-                    .forEach((input) => {
-                        const val = input.value.trim();
-                        if (val) {
-                            details[input.dataset.attr!] = val;
-                        }
-                    });
-
-                const categoryIds = Array.from(
-                    document.querySelectorAll<HTMLInputElement>(
-                        'input[name="cat-ids"]:checked',
-                    ),
-                ).map((cb) => cb.value);
-
-                if (salePrice && parseFloat(salePrice) >= price) {
-                    errBox.textContent =
-                        "El precio de oferta debe ser menor al precio regular.";
-                    errBox.classList.remove("hidden");
-                    return;
-                }
-
-                const body: Record<string, unknown> = {
-                    name,
-                    brand,
-                    price,
-                    stock,
-                    display_order: displayOrder,
-                    featured,
-                    ...(imageUrl && { image_url: imageUrl }),
-                    ...(description && { description }),
-                    ...(salePrice && { sale_price: parseFloat(salePrice) }),
-                    ...(Object.keys(details).length > 0 && { details }),
-                    ...(categoryIds.length && { category_ids: categoryIds }),
-                };
-
-                const submitBtn = document.getElementById(
-                    "submit-product",
-                ) as HTMLButtonElement;
-                submitBtn.disabled = true;
-                try {
-                    if (id) {
-                        await api.put(`/products/${id}`, body);
-                        showToast(
-                            "Producto actualizado correctamente",
-                            "success",
-                        );
-                    } else {
-                        await api.post("/products", body);
-                        showToast("Producto creado correctamente", "success");
-                    }
-                    (
-                        document.getElementById(
-                            "product-dialog",
-                        ) as HTMLDialogElement
-                    ).close();
-                    loadProducts(currentPage);
-                } catch (err: unknown) {
-                    errBox.textContent =
-                        err instanceof Error
-                            ? err.message
-                            : "Error al guardar producto";
-                    errBox.classList.remove("hidden");
-                } finally {
-                    submitBtn.disabled = false;
-                }
-            });
-
-        // ── Delete confirm ─────────────────────────────────────────
-        document
-            .getElementById("confirm-delete")
-            ?.addEventListener("click", async () => {
-                const id = (
-                    document.getElementById(
-                        "delete-product-id",
-                    ) as HTMLInputElement
-                ).value;
-                try {
-                    await api.delete(`/products/${id}`);
-                    showToast("Producto eliminado del catálogo", "success");
-                    (
-                        document.getElementById(
-                            "delete-dialog",
-                        ) as HTMLDialogElement
-                    ).close();
-                    loadProducts(currentPage);
-                } catch (err: unknown) {
-                    showToast(
-                        err instanceof Error
-                            ? err.message
-                            : "Error al eliminar",
-                        "error",
-                    );
-                }
-            });
-
-        // ── Event wiring ───────────────────────────────────────────
         document.addEventListener("astro:page-load", () => {
             if (window.location.pathname !== "/products") return;
 
+            document
+                .getElementById("product-form")
+                ?.addEventListener("submit", async (e) => {
+                    e.preventDefault();
+                    const errBox = document.getElementById("form-error")!;
+                    errBox.classList.add("hidden");
+                    const id = (
+                        document.getElementById(
+                            "product-id",
+                        ) as HTMLInputElement
+                    ).value;
+                    const name = (
+                        document.getElementById("f-name") as HTMLInputElement
+                    ).value.trim();
+                    const brand = (
+                        document.getElementById("f-brand") as HTMLInputElement
+                    ).value.trim();
+                    const price = parseFloat(
+                        (document.getElementById("f-price") as HTMLInputElement)
+                            .value,
+                    );
+                    const salePrice = (
+                        document.getElementById(
+                            "f-sale-price",
+                        ) as HTMLInputElement
+                    ).value;
+                    const stock = parseInt(
+                        (document.getElementById("f-stock") as HTMLInputElement)
+                            .value || "0",
+                    );
+                    const imageUrl =
+                        (
+                            document.getElementById(
+                                "f-image-url",
+                            ) as HTMLInputElement
+                        ).value.trim() ||
+                        (
+                            document.getElementById(
+                                "f-image-url-manual",
+                            ) as HTMLInputElement
+                        ).value.trim();
+                    const displayOrder = parseInt(
+                        (
+                            document.getElementById(
+                                "f-display-order",
+                            ) as HTMLInputElement
+                        ).value || "1",
+                    );
+                    const description = (
+                        document.getElementById(
+                            "f-description",
+                        ) as HTMLTextAreaElement
+                    ).value.trim();
+                    const featured = !(
+                        document.getElementById(
+                            "f-featured",
+                        ) as HTMLInputElement
+                    ).checked;
+
+                    const details: Record<string, string> = {};
+                    document
+                        .querySelectorAll<HTMLInputElement>(
+                            'input[name="attr-value"]',
+                        )
+                        .forEach((input) => {
+                            const val = input.value.trim();
+                            if (val) {
+                                details[input.dataset.attr!] = val;
+                            }
+                        });
+
+                    const categoryIds = Array.from(
+                        document.querySelectorAll<HTMLInputElement>(
+                            'input[name="cat-ids"]:checked',
+                        ),
+                    ).map((cb) => cb.value);
+
+                    if (salePrice && parseFloat(salePrice) >= price) {
+                        errBox.textContent =
+                            "El precio de oferta debe ser menor al precio regular.";
+                        errBox.classList.remove("hidden");
+                        return;
+                    }
+
+                    const body: Record<string, unknown> = {
+                        name,
+                        brand,
+                        price,
+                        stock,
+                        display_order: displayOrder,
+                        featured,
+                        ...(imageUrl && { image_url: imageUrl }),
+                        ...(description && { description }),
+                        ...(salePrice && { sale_price: parseFloat(salePrice) }),
+                        ...(Object.keys(details).length > 0 && { details }),
+                        ...(categoryIds.length && {
+                            category_ids: categoryIds,
+                        }),
+                    };
+
+                    const submitBtn = document.getElementById(
+                        "submit-product",
+                    ) as HTMLButtonElement;
+                    submitBtn.disabled = true;
+                    try {
+                        if (id) {
+                            await api.put(`/products/${id}`, body);
+                            showToast(
+                                "Producto actualizado correctamente",
+                                "success",
+                            );
+                        } else {
+                            await api.post("/products", body);
+                            showToast(
+                                "Producto creado correctamente",
+                                "success",
+                            );
+                        }
+                        (
+                            document.getElementById(
+                                "product-dialog",
+                            ) as HTMLDialogElement
+                        ).close();
+                        loadProducts(currentPage);
+                    } catch (err: unknown) {
+                        errBox.textContent =
+                            err instanceof Error
+                                ? err.message
+                                : "Error al guardar producto";
+                        errBox.classList.remove("hidden");
+                    } finally {
+                        submitBtn.disabled = false;
+                    }
+                });
+
+            // ── Delete confirm ─────────────────────────────────────────
+            document
+                .getElementById("confirm-delete")
+                ?.addEventListener("click", async () => {
+                    const id = (
+                        document.getElementById(
+                            "delete-product-id",
+                        ) as HTMLInputElement
+                    ).value;
+                    try {
+                        await api.delete(`/products/${id}`);
+                        showToast("Producto eliminado del catálogo", "success");
+                        (
+                            document.getElementById(
+                                "delete-dialog",
+                            ) as HTMLDialogElement
+                        ).close();
+                        loadProducts(currentPage);
+                    } catch (err: unknown) {
+                        showToast(
+                            err instanceof Error
+                                ? err.message
+                                : "Error al eliminar",
+                            "error",
+                        );
+                    }
+                });
+
+            // ── Event wiring ───────────────────────────────────────────
             loadCategories().then(() => loadProducts());
 
             document
