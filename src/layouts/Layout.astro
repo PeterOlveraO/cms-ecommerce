@@ -78,10 +78,16 @@ const navItems = [
     </head>
 
     <body class="flex min-h-dvh bg-surface-950">
+        <!-- ─── Backdrop for Mobile Sidebar ──────────────────────── -->
+        <div
+            id="sidebar-backdrop"
+            class="fixed inset-0 bg-black/50 z-30 hidden md:hidden transition-opacity opacity-0 backdrop-blur-sm"
+        ></div>
+
         <!-- ─── Sidebar ──────────────────────────────────────────── -->
         <aside
             id="sidebar"
-            class="flex flex-col w-64 shrink-0 glass-card border-r border-teal-900/20 min-h-dvh sticky top-0 h-dvh overflow-y-auto z-30 transition-transform duration-300"
+            class="fixed inset-y-0 left-0 z-40 flex flex-col w-64 shrink-0 glass-card border-r border-teal-900/20 h-dvh overflow-y-auto transition-all duration-300 -translate-x-full md:sticky md:top-0 md:left-auto md:translate-x-0 md:z-30"
         >
             <!-- Logo -->
             <div
@@ -181,9 +187,16 @@ const navItems = [
         <div class="flex-1 flex flex-col min-w-0">
             <!-- Header -->
             <header
-                class="sticky top-0 z-20 glass-card border-b border-teal-900/20 px-6 py-3.5 flex items-center justify-between gap-4"
+                class="sticky top-0 z-20 glass-card border-b border-teal-900/20 px-4 md:px-6 py-3.5 flex items-center justify-between gap-4"
             >
                 <div class="flex items-center gap-3 min-w-0">
+                    <button
+                        id="menu-btn"
+                        class="p-2 -ml-2 text-slate-300 hover:text-white focus:outline-none shrink-0"
+                        aria-label="Alternar menú"
+                    >
+                        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
                     <h1 class="text-base font-semibold text-white truncate">
                         {title}
                     </h1>
@@ -199,7 +212,7 @@ const navItems = [
             </header>
 
             <!-- Page content -->
-            <main class="flex-1 p-6 animate-fade-in-up">
+            <main class="flex-1 p-4 md:p-6 animate-fade-in-up max-w-full overflow-x-hidden">
                 <slot />
             </main>
         </div>
@@ -343,6 +356,60 @@ const navItems = [
                     window.location.href = "/";
                     return;
                 }
+
+                // ── Mobile & Desktop Menu Toggle ──────────────────────────
+                const sidebar = document.getElementById("sidebar");
+                const menuBtn = document.getElementById("menu-btn");
+                const backdrop = document.getElementById("sidebar-backdrop");
+
+                // Restore desktop state from localStorage
+                if (window.innerWidth >= 768) {
+                    const isDesktopClosed = localStorage.getItem("sidebar-desktop-closed") === "true";
+                    if (isDesktopClosed) {
+                        sidebar?.classList.add("sidebar-desktop-closed");
+                    }
+                }
+
+                const toggleMenu = (forceCloseMobile = false) => {
+                    const isMobile = window.innerWidth < 768;
+                    
+                    if (isMobile) {
+                        const isClosed = sidebar?.classList.contains("-translate-x-full");
+                        if (forceCloseMobile && isClosed) return;
+                        
+                        if (isClosed && !forceCloseMobile) {
+                            // Open mobile menu
+                            sidebar?.classList.remove("-translate-x-full");
+                            backdrop?.classList.remove("hidden");
+                            setTimeout(() => backdrop?.classList.remove("opacity-0"), 10);
+                            document.body.style.overflow = "hidden";
+                        } else {
+                            // Close mobile menu
+                            sidebar?.classList.add("-translate-x-full");
+                            backdrop?.classList.add("opacity-0");
+                            setTimeout(() => backdrop?.classList.add("hidden"), 300);
+                            document.body.style.overflow = "";
+                        }
+                    } else {
+                        // Desktop menu logic
+                        if (forceCloseMobile) return; // Backdrop click doesn't apply to desktop
+                        
+                        const isClosed = sidebar?.classList.contains("sidebar-desktop-closed");
+                        if (isClosed) {
+                            sidebar?.classList.remove("sidebar-desktop-closed");
+                            localStorage.setItem("sidebar-desktop-closed", "false");
+                        } else {
+                            sidebar?.classList.add("sidebar-desktop-closed");
+                            localStorage.setItem("sidebar-desktop-closed", "true");
+                        }
+                    }
+                };
+
+                menuBtn?.addEventListener("click", () => toggleMenu(false));
+
+                backdrop?.addEventListener("click", () => {
+                    if (window.innerWidth < 768) toggleMenu(true);
+                });
 
                 // Logout button
                 const logoutBtn = document.getElementById("logout-btn");

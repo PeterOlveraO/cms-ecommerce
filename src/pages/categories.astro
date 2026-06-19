@@ -27,24 +27,26 @@ import Layout from "../layouts/Layout.astro";
                 </button>
             </div>
             <div class="glass-card rounded-xl overflow-hidden">
-                <table class="cms-table">
-                    <thead
-                        ><tr>
-                            <th>#</th><th>Nombre</th><th>Orden</th><th
-                                class="text-right">Acciones</th
-                            >
-                        </tr></thead
-                    >
-                    <tbody id="categories-body">
-                        <tr
-                            ><td
-                                colspan="4"
-                                class="text-center py-10 text-slate-500"
-                                >Cargando categorías...</td
-                            ></tr
-                        >
-                    </tbody>
-                </table>
+                <div class="overflow-x-auto">
+                    <table class="cms-table">
+                        <thead>
+                            <tr>
+                                <th>#</th><th>Nombre</th><th>Orden</th><th
+                                    class="text-right">Acciones</th
+                                >
+                            </tr>
+                        </thead>
+                        <tbody id="categories-body">
+                            <tr>
+                                <td
+                                    colspan="4"
+                                    class="text-center py-10 text-slate-500"
+                                    >Cargando categorías...</td
+                                >
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -71,24 +73,26 @@ import Layout from "../layouts/Layout.astro";
                 </button>
             </div>
             <div class="glass-card rounded-xl overflow-hidden">
-                <table class="cms-table">
-                    <thead
-                        ><tr>
-                            <th>#</th><th>Nombre</th><th>Estado</th><th
-                                class="text-right">Acciones</th
-                            >
-                        </tr></thead
-                    >
-                    <tbody id="attributes-body">
-                        <tr
-                            ><td
-                                colspan="4"
-                                class="text-center py-10 text-slate-500"
-                                >Cargando atributos...</td
-                            ></tr
-                        >
-                    </tbody>
-                </table>
+                <div class="overflow-x-auto">
+                    <table class="cms-table">
+                        <thead>
+                            <tr>
+                                <th>#</th><th>Nombre</th><th>Estado</th><th
+                                    class="text-right">Acciones</th
+                                >
+                            </tr>
+                        </thead>
+                        <tbody id="attributes-body">
+                            <tr>
+                                <td
+                                    colspan="4"
+                                    class="text-center py-10 text-slate-500"
+                                    >Cargando atributos...</td
+                                >
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>

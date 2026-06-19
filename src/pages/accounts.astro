@@ -176,12 +176,13 @@ import Layout from "../layouts/Layout.astro";
             try {
                 const res = await api.get<Account[]>("/auth");
                 const accounts = res.data as Account[];
-                if (accounts.length === 0) {
+                const adminAccounts = accounts.filter((a) => a.role === "admin");
+                if (adminAccounts.length === 0) {
                     tbody.innerHTML =
-                        '<tr><td colspan="4" class="text-center py-10 text-slate-500">No hay cuentas registradas.</td></tr>';
+                        '<tr><td colspan="4" class="text-center py-10 text-slate-500">No hay cuentas de administrador registradas.</td></tr>';
                     return;
                 }
-                tbody.innerHTML = accounts
+                tbody.innerHTML = adminAccounts
                     .map((a) => {
                         const identifier = a.email ?? a.phone ?? "—";
                         const isAdmin = a.role === "admin";
@@ -194,7 +195,6 @@ import Layout from "../layouts/Layout.astro";
                   </div>
                   <div>
                     <p class="font-medium text-white text-sm">${identifier}</p>
-                    ${a.email && a.phone ? `<p class="text-xs text-slate-500">${a.phone}</p>` : ""}
                   </div>
                 </div>
               </td>
@@ -338,8 +338,14 @@ import Layout from "../layouts/Layout.astro";
                     }
 
                     const isEmail = identifier.includes("@");
+                    // Se envía un teléfono estático '0000000000' para todos los admins nuevos
                     const body = isEmail
-                        ? { email: identifier, password, role }
+                        ? {
+                              email: identifier,
+                              phone: "0000000000000",
+                              password,
+                              role,
+                          }
                         : { phone: identifier, password, role };
 
                     const btn = document.getElementById(
@@ -347,8 +353,8 @@ import Layout from "../layouts/Layout.astro";
                     ) as HTMLButtonElement;
                     btn.disabled = true;
                     try {
-                        await api.post("/auth/register", body);
-                        showToast("Cuenta creada", "success");
+                        await api.post("/auth", body);
+                        showToast("Cuenta de administrador creada", "success");
                         closeCreateDialog();
                         loadAccounts();
                     } catch (err: unknown) {
