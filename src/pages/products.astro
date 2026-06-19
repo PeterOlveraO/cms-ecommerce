@@ -790,7 +790,7 @@ import Layout from "../layouts/Layout.astro";
 
         // ── Form submit ────────────────────────────────────────────
         document.addEventListener("astro:page-load", () => {
-            if (window.location.pathname !== "/products") return;
+            if (!window.location.pathname.startsWith("/products")) return;
 
             document
                 .getElementById("product-form")
