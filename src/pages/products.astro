@@ -162,7 +162,7 @@ import Layout from "../layouts/Layout.astro";
                         placeholder="Descripción del producto…"></textarea>
                 </div>
 
-                <div class="grid grid-cols-3 gap-4">
+                <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="form-label"
                             >Precio <span class="text-red-400">*</span></label
@@ -186,17 +186,6 @@ import Layout from "../layouts/Layout.astro";
                             step="0.01"
                             class="form-input"
                             placeholder="999.00"
-                        />
-                    </div>
-                    <div>
-                        <label class="form-label">Stock</label>
-                        <input
-                            id="f-stock"
-                            type="number"
-                            min="0"
-                            class="form-input"
-                            placeholder="30"
-                            value="0"
                         />
                     </div>
                 </div>
@@ -296,6 +285,17 @@ import Layout from "../layouts/Layout.astro";
                         >
                         </div>
                     </label>
+                </div>
+
+                <div class="pt-4 border-t border-teal-900/20">
+                    <div class="flex items-center justify-between mb-3">
+                        <label class="form-label mb-0">Variantes e Inventario</label>
+                        <button type="button" id="btn-add-variant" class="text-xs bg-teal-600/20 text-teal-400 px-2 py-1 rounded hover:bg-teal-600/30 transition-colors">+ Añadir Variante</button>
+                    </div>
+                    <div id="variants-container" class="space-y-3">
+                        <!-- Variants -->
+                    </div>
+                    <p class="text-[10px] text-slate-500 mt-2">Si no añades ninguna, se creará una por defecto sin stock.</p>
                 </div>
 
                 <div>
@@ -560,6 +560,7 @@ import Layout from "../layouts/Layout.astro";
                 "Seleccionar archivo…";
             renderCategoryCheckboxes([]);
             await renderAttributeCheckboxes({});
+            renderVariants([]);
             (
                 document.getElementById("form-error") as HTMLElement
             ).classList.add("hidden");
@@ -581,8 +582,8 @@ import Layout from "../layouts/Layout.astro";
             ).showModal();
 
             try {
-                const res = await api.get<Product>(`/products/${id}`);
-                const p = res.data as Product;
+                const res = await api.get<any>(`/products/${id}`);
+                const p = res.data;
 
                 (
                     document.getElementById("product-id") as HTMLInputElement
@@ -601,8 +602,9 @@ import Layout from "../layouts/Layout.astro";
                 (
                     document.getElementById("f-sale-price") as HTMLInputElement
                 ).value = p.sale_price ? String(p.sale_price) : "";
-                (document.getElementById("f-stock") as HTMLInputElement).value =
-                    String(p.stock);
+                
+                // Variantes
+                renderVariants(p.variants || []);
                 // Populate image field and show preview for existing image
                 (
                     document.getElementById("f-image-url") as HTMLInputElement
@@ -788,6 +790,53 @@ import Layout from "../layouts/Layout.astro";
             });
         }
 
+        // ── Variants Logic ─────────────────────────────────────────
+        let currentVariants: any[] = [];
+        const variantsContainer = document.getElementById("variants-container")!;
+        
+        function renderVariants(variants: any[]) {
+            currentVariants = variants;
+            variantsContainer.innerHTML = "";
+            if (variants.length === 0) {
+                variantsContainer.innerHTML = '<p class="text-xs text-slate-500 italic">No hay variantes configuradas. Añade una para configurar el stock.</p>';
+                return;
+            }
+            variants.forEach((v, index) => {
+                const row = document.createElement("div");
+                row.className = "flex items-center gap-2 bg-surface-900/50 p-2 rounded border border-teal-900/20";
+                row.innerHTML = `
+                    <div class="flex-1 grid grid-cols-3 gap-2">
+                        <input type="text" class="form-input text-xs var-name" placeholder="Ej. Talla M, Rojo..." value="${v.variante1 || ''}" required />
+                        <input type="text" class="form-input text-xs var-name2" placeholder="Opcional (Ej. Color)" value="${v.variante2 || ''}" />
+                        <input type="number" min="0" class="form-input text-xs var-stock" placeholder="Stock" value="${v.stock !== undefined ? v.stock : 0}" required />
+                    </div>
+                    <label class="flex items-center gap-1 text-[10px] text-slate-400 cursor-pointer">
+                        <input type="checkbox" class="var-active" ${v.is_active !== false ? 'checked' : ''} /> Activo
+                    </label>
+                    <button type="button" class="text-red-400 hover:text-red-300 ml-1 p-1 var-delete" title="Quitar variante">✕</button>
+                `;
+                
+                // Delete
+                row.querySelector(".var-delete")!.addEventListener("click", () => {
+                    currentVariants.splice(index, 1);
+                    renderVariants(currentVariants);
+                });
+                
+                // Keep values updated in array so they aren't lost if re-rendered
+                row.querySelector(".var-name")!.addEventListener("input", (e) => { currentVariants[index].variante1 = (e.target as HTMLInputElement).value; });
+                row.querySelector(".var-name2")!.addEventListener("input", (e) => { currentVariants[index].variante2 = (e.target as HTMLInputElement).value; });
+                row.querySelector(".var-stock")!.addEventListener("input", (e) => { currentVariants[index].stock = parseInt((e.target as HTMLInputElement).value || "0"); });
+                row.querySelector(".var-active")!.addEventListener("change", (e) => { currentVariants[index].is_active = (e.target as HTMLInputElement).checked; });
+
+                variantsContainer.appendChild(row);
+            });
+        }
+
+        document.getElementById("btn-add-variant")?.addEventListener("click", () => {
+            currentVariants.push({ variante1: "", variante2: "", stock: 0, is_active: true });
+            renderVariants(currentVariants);
+        });
+
         // ── Form submit ────────────────────────────────────────────
         document.addEventListener("astro:page-load", () => {
             if (!window.location.pathname.startsWith("/products")) return;
@@ -818,10 +867,7 @@ import Layout from "../layouts/Layout.astro";
                             "f-sale-price",
                         ) as HTMLInputElement
                     ).value;
-                    const stock = parseInt(
-                        (document.getElementById("f-stock") as HTMLInputElement)
-                            .value || "0",
-                    );
+                    const stock = 0; // Se maneja por variante
                     const imageUrl =
                         (
                             document.getElementById(
@@ -883,6 +929,7 @@ import Layout from "../layouts/Layout.astro";
                         stock,
                         display_order: displayOrder,
                         featured,
+                        variants: currentVariants,
                         ...(imageUrl && { image_url: imageUrl }),
                         ...(description && { description }),
                         ...(salePrice && { sale_price: parseFloat(salePrice) }),

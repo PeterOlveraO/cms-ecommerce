@@ -133,14 +133,19 @@ import Layout from "../layouts/Layout.astro";
                         placeholder="O pega una URL externa…"
                     />
                 </div>
-                <div>
-                    <label class="form-label">URL de Enlace (opcional)</label>
+                <div class="relative">
+                    <label class="form-label">Enlace a Producto (opcional)</label>
                     <input
-                        id="b-link-url"
-                        type="url"
+                        id="b-link-search"
+                        type="text"
                         class="form-input"
-                        placeholder="https://ecommerce.mx/promo"
+                        placeholder="Buscar producto por nombre..."
+                        autocomplete="off"
                     />
+                    <input type="hidden" id="b-link-url" />
+                    <div id="b-link-dropdown" class="absolute z-50 left-0 right-0 top-full mt-1 bg-surface-800 border border-teal-900/30 rounded-lg shadow-xl hidden overflow-hidden">
+                        <ul id="b-link-results" class="max-h-48 overflow-y-auto"></ul>
+                    </div>
                 </div>
                 <div>
                     <label class="form-label"
@@ -311,11 +316,20 @@ import Layout from "../layouts/Layout.astro";
                             bPrevWrap.classList.add("hidden");
                             bLabelTx.textContent = "Seleccionar archivo…";
                         }
-                        (
-                            document.getElementById(
-                                "b-link-url",
-                            ) as HTMLInputElement
-                        ).value = el.dataset.link!;
+                        const linkUrl = el.dataset.link!;
+                        const hiddenLinkInput = document.getElementById("b-link-url") as HTMLInputElement;
+                        const searchInput = document.getElementById("b-link-search") as HTMLInputElement;
+                        hiddenLinkInput.value = linkUrl;
+                        searchInput.value = linkUrl;
+
+                        if (linkUrl && linkUrl.startsWith("product/")) {
+                            const uuid = linkUrl.split("product/")[1];
+                            api.get<any>("/products/" + uuid).then((res) => {
+                                if (res.data && res.data.name) {
+                                    searchInput.value = res.data.name;
+                                }
+                            }).catch(() => {});
+                        }
                         (
                             document.getElementById(
                                 "b-order",
@@ -380,6 +394,7 @@ import Layout from "../layouts/Layout.astro";
                             "banner-dialog",
                         ) as HTMLDialogElement
                     ).showModal();
+                    (document.getElementById("b-link-search") as HTMLInputElement).value = "";
                 });
 
             const closeBannerDialog = () =>
@@ -442,7 +457,7 @@ import Layout from "../layouts/Layout.astro";
                             name,
                             image_url,
                             display_order,
-                            ...(link_url && { link_url }),
+                            link_url: link_url || null,
                         };
                         if (id) {
                             await api.put(`/header-images/${id}`, body);
@@ -588,6 +603,61 @@ import Layout from "../layouts/Layout.astro";
                         );
                     }
                 });
+
+            // Product Search Autocomplete logic
+            const searchInput = document.getElementById("b-link-search") as HTMLInputElement;
+            const hiddenLink = document.getElementById("b-link-url") as HTMLInputElement;
+            const dropdown = document.getElementById("b-link-dropdown")!;
+            const resultsUl = document.getElementById("b-link-results")!;
+            let searchTimeout: ReturnType<typeof setTimeout>;
+
+            searchInput.addEventListener("input", (e) => {
+                const val = (e.target as HTMLInputElement).value.trim();
+                if (val === "") {
+                    hiddenLink.value = "";
+                    dropdown.classList.add("hidden");
+                    return;
+                }
+                
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(async () => {
+                    try {
+                        const res = await api.get<any>(`/products?search=${encodeURIComponent(val)}&limit=5`);
+                        const products = res.data || [];
+                        if (products.length === 0) {
+                            resultsUl.innerHTML = '<li class="px-4 py-3 text-sm text-slate-500">No se encontraron productos</li>';
+                        } else {
+                            resultsUl.innerHTML = products.map((p: any) => `
+                                <li class="px-4 py-2 border-b border-teal-900/10 hover:bg-teal-900/20 cursor-pointer flex items-center gap-3 transition-colors" data-id="${p.id}" data-name="${p.name}">
+                                    <img src="${p.image_url}" class="w-8 h-8 rounded object-cover bg-surface-900 shrink-0" />
+                                    <div class="truncate">
+                                        <p class="text-sm text-white truncate">${p.name}</p>
+                                    </div>
+                                </li>
+                            `).join("");
+
+                            resultsUl.querySelectorAll("li[data-id]").forEach(li => {
+                                li.addEventListener("click", () => {
+                                    const id = (li as HTMLElement).dataset.id!;
+                                    const name = (li as HTMLElement).dataset.name!;
+                                    searchInput.value = name;
+                                    hiddenLink.value = `product/${id}`;
+                                    dropdown.classList.add("hidden");
+                                });
+                            });
+                        }
+                        dropdown.classList.remove("hidden");
+                    } catch (err) {
+                        console.error(err);
+                    }
+                }, 300);
+            });
+
+            document.addEventListener("click", (e) => {
+                if (!searchInput.contains(e.target as Node) && !dropdown.contains(e.target as Node)) {
+                    dropdown.classList.add("hidden");
+                }
+            });
         });
     </script>
 </Layout>
