@@ -168,8 +168,50 @@ export const api = {
   delete: <T>(path: string) => apiFetch<T>(path, { method: "DELETE" }),
 };
 
-// ── Image upload ─────────────────────────────────────────────
-export const uploadImage = async (file: File): Promise<string> => {
+// ── Image upload & WebP Conversion ─────────────────────────────
+const convertToWebP = async (file: File): Promise<File> => {
+  if (file.type === "image/webp") return file;
+  
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return resolve(file);
+      
+      ctx.drawImage(img, 0, 0);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) return resolve(file);
+          const webpFile = new File(
+            [blob],
+            file.name.replace(/\.[^/.]+$/, "") + ".webp",
+            { type: "image/webp" }
+          );
+          resolve(webpFile);
+        },
+        "image/webp",
+        0.85
+      );
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(file);
+    };
+    img.src = url;
+  });
+};
+
+export const uploadImage = async (originalFile: File): Promise<string> => {
+  // Convertimos la imagen a .webp antes de subirla
+  const file = await convertToWebP(originalFile);
+
   const doFetch = (authToken: string | null): Promise<Response> => {
     const fd = new FormData();
     fd.append("image", file);
