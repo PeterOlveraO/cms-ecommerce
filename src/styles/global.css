@@ -117,6 +117,13 @@
     background: linear-gradient(135deg, #0a0f1e 0%, #0f172a 100%);
   }
 
+  /* Sidebar responsive toggle for desktop */
+  @media (min-width: 768px) {
+    .sidebar-desktop-closed {
+      margin-left: -16rem !important; /* -w-64 */
+    }
+  }
+
   /* Sidebar nav item */
   .nav-item {
     display: flex;
