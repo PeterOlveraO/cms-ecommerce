@@ -48,6 +48,7 @@ import Layout from "../layouts/Layout.astro";
                     </tbody>
                 </table>
             </div>
+            <div id="pagination-container" class="px-5 pb-5"></div>
         </div>
     </div>
 
@@ -141,15 +142,30 @@ import Layout from "../layouts/Layout.astro";
         }
 
         let allCustomers: Customer[] = [];
+        let filteredCustomers: Customer[] = [];
+        let currentPage = 1;
+        const itemsPerPage = 10;
 
-        function renderTable(customers: Customer[]) {
+        function renderTable() {
             const tbody = document.getElementById("customers-body")!;
-            if (customers.length === 0) {
+            const paginationContainer = document.getElementById("pagination-container");
+
+            if (filteredCustomers.length === 0) {
                 tbody.innerHTML =
                     '<tr><td colspan="6" class="text-center py-10 text-slate-500">No se encontraron clientes.</td></tr>';
+                if (paginationContainer) paginationContainer.innerHTML = '';
                 return;
             }
-            tbody.innerHTML = customers
+
+            const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage);
+            if (currentPage > totalPages) currentPage = totalPages;
+            if (currentPage < 1) currentPage = 1;
+
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const paginatedCustomers = filteredCustomers.slice(startIndex, endIndex);
+
+            tbody.innerHTML = paginatedCustomers
                 .map((c) => {
                     const initials =
                         `${c.first_name.charAt(0)}${c.last_name.charAt(0)}`.toUpperCase();
@@ -210,13 +226,46 @@ import Layout from "../layouts/Layout.astro";
                     ).showModal();
                 });
             });
+
+            renderPagination(totalPages);
+        }
+
+        function renderPagination(totalPages: number) {
+            const container = document.getElementById("pagination-container");
+            if (!container) return;
+
+            if (totalPages <= 1) {
+                container.innerHTML = "";
+                return;
+            }
+
+            let html = '<div class="flex justify-between items-center mt-4 pt-4 border-t border-white/5">';
+            html += `<span class="text-xs text-slate-500">Página ${currentPage} de ${totalPages} — ${filteredCustomers.length} clientes</span>`;
+            html += '<div class="flex items-center gap-2">';
+            
+            html += `<button class="btn-secondary px-3 py-1 text-sm ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled' : ''}>Anterior</button>`;
+            
+            html += `<button class="btn-secondary px-3 py-1 text-sm ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''}" data-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled' : ''}>Siguiente</button>`;
+            
+            html += '</div></div>';
+            container.innerHTML = html;
+
+            container.querySelectorAll("button[data-page]").forEach(btn => {
+                btn.addEventListener("click", (e) => {
+                    const page = parseInt((e.currentTarget as HTMLButtonElement).dataset.page || "1");
+                    currentPage = page;
+                    renderTable();
+                });
+            });
         }
 
         async function loadCustomers() {
             try {
                 const res = await api.get<Customer[]>("/customers");
                 allCustomers = res.data as Customer[];
-                renderTable(allCustomers);
+                filteredCustomers = [...allCustomers];
+                currentPage = 1;
+                renderTable();
             } catch (err: unknown) {
                 document.getElementById("customers-body")!.innerHTML =
                     `<tr><td colspan="6" class="text-center py-10 text-red-400 text-sm">${err instanceof Error ? err.message : "Error"}</td></tr>`;
@@ -301,16 +350,16 @@ import Layout from "../layouts/Layout.astro";
                         const q = (
                             e.target as HTMLInputElement
                         ).value.toLowerCase();
-                        renderTable(
-                            allCustomers.filter(
-                                (c) =>
-                                    `${c.first_name} ${c.last_name}`
-                                        .toLowerCase()
-                                        .includes(q) ||
-                                    (c.city ?? "").toLowerCase().includes(q) ||
-                                    (c.phone ?? "").includes(q),
-                            ),
+                        filteredCustomers = allCustomers.filter(
+                            (c) =>
+                                `${c.first_name} ${c.last_name}`
+                                    .toLowerCase()
+                                    .includes(q) ||
+                                (c.city ?? "").toLowerCase().includes(q) ||
+                                (c.phone ?? "").includes(q),
                         );
+                        currentPage = 1;
+                        renderTable();
                     }, 300);
                 });
 

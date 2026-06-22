@@ -62,13 +62,11 @@ import Layout from "../layouts/Layout.astro";
                         >Método / Tipo <span class="text-red-400">*</span
                         ></label
                     >
-                    <input
-                        id="pm-method"
-                        type="text"
-                        class="form-input"
-                        placeholder="Transferencia SPEI"
-                        required
-                    />
+                    <select id="pm-method" class="form-input" required>
+                        <option value="" disabled selected>Selecciona un método...</option>
+                        <option value="Transferencia">Transferencia</option>
+                        <option value="Efectivo">Efectivo</option>
+                    </select>
                 </div>
                 <div>
                     <label class="form-label"
@@ -246,7 +244,7 @@ import Layout from "../layouts/Layout.astro";
                         (
                             document.getElementById(
                                 "pm-method",
-                            ) as HTMLInputElement
+                            ) as HTMLSelectElement
                         ).value = el.dataset.method!;
                         (
                             document.getElementById(
@@ -346,7 +344,7 @@ import Layout from "../layouts/Layout.astro";
                         document.getElementById("pm-id") as HTMLInputElement
                     ).value;
                     const method = (
-                        document.getElementById("pm-method") as HTMLInputElement
+                        document.getElementById("pm-method") as HTMLSelectElement
                     ).value.trim();
                     const bank = (
                         document.getElementById("pm-bank") as HTMLInputElement
