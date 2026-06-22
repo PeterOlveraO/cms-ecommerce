@@ -252,21 +252,35 @@ import Layout from "../layouts/Layout.astro";
                             placeholder="O pega una URL externa…"
                         />
                     </div>
-                    <div>
-                        <label class="form-label"
-                            >Orden de Despliegue <span class="text-red-400"
-                                >*</span
-                            ></label
-                        >
-                        <input
-                            id="f-display-order"
-                            type="number"
-                            min="0"
-                            class="form-input"
-                            placeholder="1"
-                            value="1"
-                            required
-                        />
+                    <div class="space-y-4">
+                        <div>
+                            <label class="form-label"
+                                >Orden de Despliegue <span class="text-red-400"
+                                    >*</span
+                                ></label
+                            >
+                            <input
+                                id="f-display-order"
+                                type="number"
+                                min="0"
+                                class="form-input"
+                                placeholder="1"
+                                value="1"
+                                required
+                            />
+                        </div>
+                        <div id="global-stock-container">
+                            <label class="form-label">Stock Global</label>
+                            <input
+                                id="f-stock"
+                                type="number"
+                                min="0"
+                                class="form-input"
+                                placeholder="0"
+                                value="0"
+                            />
+                            <p class="text-[10px] text-slate-500 mt-1">Activo si no hay variantes configuradas</p>
+                        </div>
                     </div>
                 </div>
 
@@ -545,6 +559,7 @@ import Layout from "../layouts/Layout.astro";
             (
                 document.getElementById("f-featured") as HTMLInputElement
             ).checked = true;
+            (document.getElementById("f-stock") as HTMLInputElement).value = "0";
             // Reset image picker
             (document.getElementById("f-image-url") as HTMLInputElement).value =
                 "";
@@ -602,6 +617,9 @@ import Layout from "../layouts/Layout.astro";
                 (
                     document.getElementById("f-sale-price") as HTMLInputElement
                 ).value = p.sale_price ? String(p.sale_price) : "";
+                (
+                    document.getElementById("f-stock") as HTMLInputElement
+                ).value = p.stock != null ? String(p.stock) : "0";
                 
                 // Variantes
                 renderVariants(p.variants || []);
@@ -797,10 +815,14 @@ import Layout from "../layouts/Layout.astro";
         function renderVariants(variants: any[]) {
             currentVariants = variants;
             variantsContainer.innerHTML = "";
+            const globalStockContainer = document.getElementById("global-stock-container");
+
             if (variants.length === 0) {
+                if (globalStockContainer) globalStockContainer.classList.remove("hidden");
                 variantsContainer.innerHTML = '<p class="text-xs text-slate-500 italic">No hay variantes configuradas. Añade una para configurar el stock.</p>';
                 return;
             }
+            if (globalStockContainer) globalStockContainer.classList.add("hidden");
             variants.forEach((v, index) => {
                 const row = document.createElement("div");
                 row.className = "flex items-center gap-2 bg-surface-900/50 p-2 rounded border border-teal-900/20";
@@ -867,7 +889,13 @@ import Layout from "../layouts/Layout.astro";
                             "f-sale-price",
                         ) as HTMLInputElement
                     ).value;
-                    const stock = 0; // Se maneja por variante
+                    let stock = parseInt(
+                        (document.getElementById("f-stock") as HTMLInputElement).value || "0"
+                    );
+
+                    if (currentVariants && currentVariants.length > 0) {
+                        stock = currentVariants.reduce((sum, v) => sum + (v.stock || 0), 0);
+                    }
                     const imageUrl =
                         (
                             document.getElementById(
