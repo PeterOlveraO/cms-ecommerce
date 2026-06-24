@@ -247,10 +247,31 @@ import Layout from "../layouts/Layout.astro";
                         <!-- URL manual fallback -->
                         <input
                             id="f-image-url-manual"
-                            type="url"
+                            type="text"
                             class="form-input text-xs"
                             placeholder="O pega una URL externa…"
                         />
+
+                        <div class="pt-4 mt-4 border-t border-teal-900/20">
+                            <label class="form-label">Galería de Imágenes Secundarias</label>
+                            <div id="gallery-previews" class="flex flex-wrap gap-2 mb-2">
+                                <!-- Previews -->
+                            </div>
+                            <label
+                                class="flex items-center gap-2 cursor-pointer btn-secondary w-fit text-xs py-2 mb-1"
+                            >
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                <span id="gallery-file-label-text">Añadir imágenes…</span>
+                                <input
+                                    id="f-gallery-files"
+                                    type="file"
+                                    accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                    multiple
+                                    class="sr-only"
+                                />
+                            </label>
+                            <p class="text-[10px] text-slate-500">Múltiples imágenes extra.</p>
+                        </div>
                     </div>
                     <div class="space-y-4">
                         <div>
@@ -283,6 +304,7 @@ import Layout from "../layouts/Layout.astro";
                         </div>
                     </div>
                 </div>
+
 
                 <div class="flex items-center gap-3">
                     <label class="form-label mb-0">Visible en Tienda</label>
@@ -414,6 +436,7 @@ import Layout from "../layouts/Layout.astro";
             sale_price?: number;
             stock: number;
             image_url: string;
+            images?: string[];
             display_order: number;
             is_active: boolean;
             featured?: boolean;
@@ -543,6 +566,28 @@ import Layout from "../layouts/Layout.astro";
             }
         }
 
+        // ── Gallery Logic ──────────────────────────────────────────
+        let currentGalleryUrls: string[] = [];
+        
+        function renderGalleryPreviews() {
+            const container = document.getElementById("gallery-previews")!;
+            container.innerHTML = "";
+            if (currentGalleryUrls.length === 0) return;
+            currentGalleryUrls.forEach((url, index) => {
+                const div = document.createElement("div");
+                div.className = "relative w-16 h-16 rounded-lg overflow-hidden bg-slate-800 border border-teal-900/30 shrink-0 group";
+                div.innerHTML = `
+                    <img src="${url}" class="w-full h-full object-cover" />
+                    <button type="button" class="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 text-slate-300 hover:text-white flex items-center justify-center text-[10px] leading-none opacity-0 group-hover:opacity-100 transition-opacity gallery-remove" title="Quitar imagen">✕</button>
+                `;
+                div.querySelector(".gallery-remove")!.addEventListener("click", () => {
+                    currentGalleryUrls.splice(index, 1);
+                    renderGalleryPreviews();
+                });
+                container.appendChild(div);
+            });
+        }
+
         // ── Open create dialog ─────────────────────────────────────
         async function openCreateDialog() {
             (
@@ -573,6 +618,8 @@ import Layout from "../layouts/Layout.astro";
                 .classList.add("hidden");
             document.getElementById("f-image-file-label-text")!.textContent =
                 "Seleccionar archivo…";
+            currentGalleryUrls = [];
+            renderGalleryPreviews();
             renderCategoryCheckboxes([]);
             await renderAttributeCheckboxes({});
             renderVariants([]);
@@ -649,6 +696,8 @@ import Layout from "../layouts/Layout.astro";
                     prevWrap.classList.add("hidden");
                     fileLabel.textContent = "Seleccionar archivo…";
                 }
+                currentGalleryUrls = p.images ? [...p.images] : [];
+                renderGalleryPreviews();
                 (
                     document.getElementById(
                         "f-display-order",
@@ -965,6 +1014,7 @@ import Layout from "../layouts/Layout.astro";
                         ...(categoryIds.length && {
                             category_ids: categoryIds,
                         }),
+                        image_urls: currentGalleryUrls,
                     };
 
                     const submitBtn = document.getElementById(
@@ -1036,6 +1086,36 @@ import Layout from "../layouts/Layout.astro";
             document
                 .getElementById("btn-new-product")
                 ?.addEventListener("click", openCreateDialog);
+
+            // ── Gallery picker wiring ──────────────────────────────
+            const galleryFileInput = document.getElementById("f-gallery-files") as HTMLInputElement;
+            const galleryLabelTx = document.getElementById("gallery-file-label-text")!;
+            
+            galleryFileInput?.addEventListener("change", async () => {
+                const files = galleryFileInput.files;
+                if (!files || files.length === 0) return;
+                
+                const originalText = galleryLabelTx.textContent;
+                galleryLabelTx.textContent = "Subiendo...";
+                galleryFileInput.disabled = true;
+                
+                try {
+                    const uploadPromises = Array.from(files).map(file => uploadImage(file));
+                    const newUrls = await Promise.all(uploadPromises);
+                    currentGalleryUrls.push(...newUrls);
+                    renderGalleryPreviews();
+                    showToast(`${newUrls.length} imagen(es) subida(s)`, "success");
+                } catch (err: unknown) {
+                    showToast(
+                        err instanceof Error ? err.message : "Error al subir galería",
+                        "error",
+                    );
+                } finally {
+                    galleryFileInput.value = "";
+                    galleryFileInput.disabled = false;
+                    if (galleryLabelTx) galleryLabelTx.textContent = originalText || "Añadir imágenes…";
+                }
+            });
 
             // ── Image picker wiring ────────────────────────────────
             const fileInput = document.getElementById(
