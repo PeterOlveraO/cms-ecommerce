@@ -49,9 +49,7 @@ import Layout from "../layouts/Layout.astro";
                 <table class="cms-table">
                     <thead
                         ><tr>
-                            <th>ID</th><th>Cliente</th><th>Total</th><th
-                                >Envío</th
-                            ><th>Estado</th><th>Fecha</th><th class="text-right"
+                            <th>ID</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Fecha</th><th class="text-right"
                                 >Acciones</th
                             >
                         </tr></thead
@@ -59,7 +57,7 @@ import Layout from "../layouts/Layout.astro";
                     <tbody id="orders-body">
                         <tr
                             ><td
-                                colspan="7"
+                                colspan="6"
                                 class="text-center py-10 text-slate-500"
                                 >Cargando pedidos...</td
                             ></tr
@@ -145,52 +143,6 @@ import Layout from "../layouts/Layout.astro";
         </div>
     </dialog>
 
-    <!-- Shipping update dialog -->
-    <dialog id="shipping-dialog">
-        <div class="modal-box max-w-sm">
-            <div class="flex items-center justify-between mb-5">
-                <h3 class="text-base font-semibold text-white">
-                    Editar Costo de Envío
-                </h3>
-                <button
-                    id="close-shipping-dialog"
-                    class="btn-icon btn-icon-red"
-                >
-                    <svg
-                        width="14"
-                        height="14"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2.5"
-                        viewBox="0 0 24 24"
-                        ><path d="M18 6 6 18M6 6l12 12"></path></svg
-                    >
-                </button>
-            </div>
-            <div class="space-y-4">
-                <input type="hidden" id="shipping-order-id" />
-                <div>
-                    <label class="form-label">Nuevo Costo de Envío (MXN)</label>
-                    <input
-                        id="new-shipping-cost"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        class="form-input"
-                        placeholder="0.00"
-                    />
-                </div>
-                <div class="flex gap-3 justify-end mt-4">
-                    <button id="cancel-shipping-dialog" class="btn-secondary"
-                        >Cancelar</button
-                    >
-                    <button id="confirm-shipping-update" class="btn-primary"
-                        >Guardar</button
-                    >
-                </div>
-            </div>
-        </div>
-    </dialog>
 
     <script>
         import { api, showToast } from "../utils/api.ts";
@@ -259,7 +211,7 @@ import Layout from "../layouts/Layout.astro";
 
         async function loadOrders() {
             const tbody = document.getElementById("orders-body")!;
-            tbody.innerHTML = `<tr><td colspan="7" class="text-center py-10 text-slate-500">Cargando pedidos...</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-10 text-slate-500">Cargando pedidos...</td></tr>`;
             try {
                 const res = await api.get<Order[]>("/orders");
                 let orders = res.data as Order[];
@@ -268,7 +220,7 @@ import Layout from "../layouts/Layout.astro";
 
                 if (orders.length === 0) {
                     tbody.innerHTML =
-                        '<tr><td colspan="7" class="text-center py-10 text-slate-500">No hay pedidos con ese filtro.</td></tr>';
+                        '<tr><td colspan="6" class="text-center py-10 text-slate-500">No hay pedidos con ese filtro.</td></tr>';
                     return;
                 }
 
@@ -279,7 +231,6 @@ import Layout from "../layouts/Layout.astro";
             <td class="font-mono text-xs text-slate-400">${o.id.slice(0, 8)}…</td>
             <td class="font-medium text-slate-300">${o.customer_first_name ? `${o.customer_first_name} ${o.customer_last_name || ""}` : o.customer_id.slice(0, 8) + "..."}</td>
             <td class="font-semibold text-white">$${Number(o.total).toLocaleString("es-MX", { minimumFractionDigits: 2 })}</td>
-            <td class="text-slate-400">$${Number(o.shipping_cost ?? 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}</td>
             <td><span class="text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[o.status] ?? ""}">${STATUS_LABELS[o.status] ?? o.status}</span></td>
             <td class="text-slate-400 text-xs">${new Date(o.created_at).toLocaleDateString("es-MX")}</td>
             <td>
@@ -333,7 +284,7 @@ import Layout from "../layouts/Layout.astro";
                         });
                     });
             } catch (err: unknown) {
-                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-10 text-red-400 text-sm">${err instanceof Error ? err.message : "Error"}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-10 text-red-400 text-sm">${err instanceof Error ? err.message : "Error"}</td></tr>`;
             }
         }
 
@@ -359,12 +310,19 @@ import Layout from "../layouts/Layout.astro";
                     ? `
           <div class="glass-card rounded-lg p-3 md:col-span-2 mt-3">
             <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">Datos de Envío y Cliente</p>
-            <div class="grid grid-cols-2 gap-x-4 gap-y-2">
-              <div><span class="text-xs text-slate-500 block">Cliente</span> <span class="text-sm text-slate-300">${customer.first_name} ${customer.last_name}</span></div>
-              <div><span class="text-xs text-slate-500 block">Teléfono</span> <span class="text-sm text-slate-300">${customer.phone}</span></div>
-              <div class="col-span-2"><span class="text-xs text-slate-500 block">Dirección</span> <span class="text-sm text-slate-300">${customer.street_address} #${customer.exterior_number} ${customer.interior_number ? "Int. " + customer.interior_number : ""}</span></div>
-              <div><span class="text-xs text-slate-500 block">Colonia / Ciudad</span> <span class="text-sm text-slate-300">${customer.city}</span></div>
-              <div><span class="text-xs text-slate-500 block">Estado / CP</span> <span class="text-sm text-slate-300">${customer.state}, ${customer.postal_code}</span></div>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3">
+              <div class="col-span-2 md:col-span-1"><span class="text-xs text-slate-500 block">Cliente</span> <span class="text-sm text-slate-300">${customer.first_name} ${customer.last_name}</span></div>
+              <div class="col-span-2 md:col-span-2"><span class="text-xs text-slate-500 block">Teléfono</span> <span class="text-sm text-slate-300">${customer.phone}</span></div>
+              
+              <div class="col-span-2 md:col-span-3 border-t border-slate-700/50 mt-1 mb-1"></div>
+              
+              <div class="col-span-2 md:col-span-3"><span class="text-xs text-slate-500 block">Calle</span> <span class="text-sm text-slate-300">${customer.street_address}</span></div>
+              <div><span class="text-xs text-slate-500 block">No. Exterior</span> <span class="text-sm text-slate-300">${customer.exterior_number}</span></div>
+              <div><span class="text-xs text-slate-500 block">No. Interior</span> <span class="text-sm text-slate-300">${customer.interior_number || "-"}</span></div>
+              <div><span class="text-xs text-slate-500 block">Ciudad / Municipio</span> <span class="text-sm text-slate-300">${customer.city}</span></div>
+              <div><span class="text-xs text-slate-500 block">Estado</span> <span class="text-sm text-slate-300">${customer.state}</span></div>
+              <div><span class="text-xs text-slate-500 block">Código Postal</span> <span class="text-sm text-slate-300">${customer.postal_code}</span></div>
+              <div><span class="text-xs text-slate-500 block">País</span> <span class="text-sm text-slate-300">${customer.country}</span></div>
             </div>
           </div>
         `
@@ -384,14 +342,9 @@ import Layout from "../layouts/Layout.astro";
               <p class="text-xs text-slate-500 mb-1">Total</p>
               <p class="font-bold text-white">$${Number(o.total).toLocaleString("es-MX", { minimumFractionDigits: 2 })}</p>
             </div>
-            <div class="glass-card rounded-lg p-3 flex justify-between items-center">
-              <div>
-                <p class="text-xs text-slate-500 mb-1">Costo de Envío</p>
-                <p class="text-slate-300">$${Number(o.shipping_cost ?? 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}</p>
-              </div>
-              <button class="btn-icon btn-icon-teal edit-shipping-btn" data-id="${o.id}" data-cost="${o.shipping_cost ?? 0}" title="Editar Envío">
-                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              </button>
+            <div class="glass-card rounded-lg p-3">
+              <p class="text-xs text-slate-500 mb-1">Costo de Envío</p>
+              <p class="text-slate-300">$${Number(o.shipping_cost ?? 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}</p>
             </div>
           </div>
           ${customerHtml}
@@ -421,26 +374,7 @@ import Layout from "../layouts/Layout.astro";
           <p class="text-xs text-slate-600 text-right">Pedido creado: ${new Date(o.created_at).toLocaleString("es-MX")}</p>
         `;
 
-                document
-                    .querySelector(".edit-shipping-btn")
-                    ?.addEventListener("click", (e) => {
-                        const btn = e.currentTarget as HTMLElement;
-                        (
-                            document.getElementById(
-                                "shipping-order-id",
-                            ) as HTMLInputElement
-                        ).value = btn.dataset.id!;
-                        (
-                            document.getElementById(
-                                "new-shipping-cost",
-                            ) as HTMLInputElement
-                        ).value = btn.dataset.cost!;
-                        (
-                            document.getElementById(
-                                "shipping-dialog",
-                            ) as HTMLDialogElement
-                        ).showModal();
-                    });
+
             } catch (err: unknown) {
                 content.innerHTML = `<p class="text-red-400 text-sm">${err instanceof Error ? err.message : "Error"}</p>`;
             }
@@ -501,60 +435,7 @@ import Layout from "../layouts/Layout.astro";
                     if (e.target === e.currentTarget) closeStatusDialog();
                 });
 
-            const closeShippingDialog = () =>
-                (
-                    document.getElementById(
-                        "shipping-dialog",
-                    ) as HTMLDialogElement
-                ).close();
-            document
-                .getElementById("close-shipping-dialog")
-                ?.addEventListener("click", closeShippingDialog);
-            document
-                .getElementById("cancel-shipping-dialog")
-                ?.addEventListener("click", closeShippingDialog);
-            document
-                .getElementById("shipping-dialog")
-                ?.addEventListener("click", (e) => {
-                    if (e.target === e.currentTarget) closeShippingDialog();
-                });
 
-            document
-                .getElementById("confirm-shipping-update")
-                ?.addEventListener("click", async () => {
-                    const id = (
-                        document.getElementById(
-                            "shipping-order-id",
-                        ) as HTMLInputElement
-                    ).value;
-                    const shipping_cost = parseFloat(
-                        (
-                            document.getElementById(
-                                "new-shipping-cost",
-                            ) as HTMLInputElement
-                        ).value,
-                    );
-                    if (isNaN(shipping_cost) || shipping_cost < 0) {
-                        showToast("Costo inválido", "error");
-                        return;
-                    }
-                    try {
-                        await api.put(`/orders/${id}/shipping`, {
-                            shipping_cost,
-                        });
-                        showToast("Costo de envío actualizado", "success");
-                        closeShippingDialog();
-                        loadOrders();
-                        openOrderDetail(id); // reload the detail view
-                    } catch (err: unknown) {
-                        showToast(
-                            err instanceof Error
-                                ? err.message
-                                : "Error al actualizar",
-                            "error",
-                        );
-                    }
-                });
 
             document
                 .getElementById("new-status")
