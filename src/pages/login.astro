@@ -225,6 +225,7 @@ import "../styles/global.css";
                 authLogin,
                 getAccessToken,
                 showToast,
+                clearTokens,
             } from "../utils/api.ts";
 
             // Redirect if already logged in
@@ -295,6 +296,7 @@ import "../styles/global.css";
                     const user = await authLogin(identifier, password);
 
                     if (user.role !== "admin") {
+                        clearTokens();
                         showError(
                             "Acceso denegado. Se requieren privilegios de administrador.",
                         );
